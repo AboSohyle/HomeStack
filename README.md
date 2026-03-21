@@ -14,8 +14,6 @@
 - **Built-in Tooling**: Integrated **Composer** for dependency management and **phpMyAdmin** for effortless database administration.
 - **SSL Ready**: Simple batch scripts to generate and trust local SSL certificates for HTTPS development.
 
-## 🚀 Quick Start
-
 ## 🛠 Requirements
 
 Before building or running HomeStack, ensure you have the following tools configured:
@@ -23,8 +21,10 @@ Before building or running HomeStack, ensure you have the following tools config
 - **C/C++ Compiler**: [winlibs-w64ucrt](https://winlibs.com/) is recommended for native Windows compatibility.
 - **Make**: Use `mingw32-make.exe`.
   - _Tip: Rename `mingw32-make.exe` to `make.exe` in your `../GCCx64/bin` folder for easier command-line usage._
-- **Resource Editor**: [ResEdit](https://resedit.apponic.com/) (or a reliable mirror) for managing application icons and metadata.
+- **Resource Editor**: [ResEdit](https://resedit.apponic.com/) for managing application icons and metadata.
 - **Code Editor**: [VS Code](https://code.visualstudio.com) or your preferred IDE.
+
+## 🚀 Quick Start
 
 ### 1. Installation
 
@@ -34,7 +34,7 @@ Before building or running HomeStack, ensure you have the following tools config
 
 ### 2. Service Management
 
-- Launch the control plane and click **Start** next to Apache and MariaDB.
+- Launch the control plane and click **Start** next to **Apache** and **MariaDB**.
 - The status indicators will turn **green** once services are live.
 
 ### 3. Project Setup
@@ -43,25 +43,11 @@ Before building or running HomeStack, ensure you have the following tools config
 - Place your project folders within this directory.
 - Access projects via `http://localhost/your-project-name`.
 
-### 4. Database Access
+## 🗄️ MariaDB First-Time Setup
 
-- **Interface**: Click the **phpMyAdmin** button or visit `http://localhost/phpmyadmin`.
-- **Credentials**:
-  - **User**: _(None by default)_
-  - **Password**: _(None by default)_
+If you are initializing your database for the first time or resetting your environment:
 
-### 5. HTTPS & SSL
-
-To enable secure browsing:
-
-1.  Navigate to `config/`.
-2.  Run `create_cert.bat`.
-3.  **Install the certificate** to your Trusted Root Certification Authorities (Chrome/Edge). For **Firefox**, manually import the certificate via Firefox Settings.
-
-## 🛠 Dependency Management
-
-HomeStack automatically adds **Composer** to your environment path while the interface is active. Simply open your terminal and run standard commands:
-
-```bash
-composer install
-```
+1. **Initialize Data Directory**: If the `data/` folder is empty, run this from your MariaDB `bin` directory:
+   ```bash
+   mariadb-install-db.exe --datadir=../data
+   ```
