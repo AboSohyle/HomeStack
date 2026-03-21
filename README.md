@@ -28,7 +28,7 @@ Before building or running HomeStack, ensure you have the following tools config
 
 ### 1. Installation
 
-1.  **Download** the latest release from the [Releases]([https://github.com](https://github.com/AboSohyle/HomeStack/releases/tag/1.0.0.0)) page.
+1.  **Download** the latest release from the [Releases]([https://github.com](https://github.com/AboSohyle/HomeStack/releases/tag/1.0.0.0) page.
 2.  **Extract** the ZIP archive to your preferred directory (e.g., `C:\HomeStack`).
 3.  **Run** `HomeStack.exe` to launch the control panel.
 
