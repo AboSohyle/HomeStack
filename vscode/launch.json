@@ -1,0 +1,46 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "D:/Portable/AMPControl/AMPControl-debug.exe", // Forward slash
+      "args": [],
+      "stopAtEntry": false,
+      "cwd": "D:/Portable/AMPControl",
+      "environment": [],
+      "externalConsole": false, // Cleaner workflow
+      "MIMode": "gdb",
+      "miDebuggerPath": "D:/Portable/GCCx64/bin/gdb.exe", // Explicit path
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Set Disassembly Flavor to Intel",
+          "text": "-gdb-set disassembly-flavor intel",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Load GDB Python Scripts",
+          "text": "python import gdb.printing",
+          "ignoreFailures": true
+        },
+        {
+          "description": "Ignore SIGILL (Stop Windows from breaking on every small internal signal)",
+          "text": "handle SIGILL nostop noprint pass",
+          "ignoreFailures": true
+        }
+      ],
+      "preLaunchTask": "Build-Debug",
+      "presentation": {
+        "reveal": "always",
+        "revealProblems": "onProblem",
+        "close": true
+      }
+    }
+  ]
+}

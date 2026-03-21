@@ -1,0 +1,149 @@
+// {
+//     "version": "2.0.0",
+//     "tasks": [
+//         {
+//             "label": "Build-Debug",
+//             "type": "shell",
+//             "command": "make",
+//             "args": [
+//                 "debug"
+//             ],
+//             "problemMatcher": [
+//                 "$gcc"
+//             ],
+//             "group": {
+//                 "kind": "build",
+//                 "isDefault": false
+//             },
+//             "presentation": {
+//                 "reveal": "always",
+//                 "revealProblems": "onProblem",
+//                 "close": true
+//             }
+//         },
+//         {
+//             "label": "Build-Release",
+//             "type": "shell",
+//             "command": "make",
+//             "args": [
+//                 "release"
+//             ],
+//             "problemMatcher": [
+//                 "$gcc"
+//             ],
+//             "group": {
+//                 "kind": "build",
+//                 "isDefault": true
+//             },
+//             "presentation": {
+//                 "reveal": "always",
+//                 "revealProblems": "onProblem",
+//                 "close": true
+//             },
+//         },
+//         {
+//             "label": "Clean",
+//             "type": "shell",
+//             "command": "make",
+//             "args": [
+//                 "clean"
+//             ],
+//             "problemMatcher": [
+//                 "$gcc"
+//             ],
+//             "group": {
+//                 "kind": "test",
+//                 "isDefault": false
+//             },
+//             "presentation": {
+//                 "reveal": "always",
+//                 "revealProblems": "onProblem",
+//                 "close": true
+//             },
+//         },
+//         {
+//             "label": "Run",
+//             "type": "shell",
+//             "command": "make",
+//             "args": [
+//                 "run"
+//             ],
+//             "problemMatcher": [
+//                 "$gcc"
+//             ],
+//             "group": {
+//                 "kind": "test",
+//                 "isDefault": false
+//             },
+//             "presentation": {
+//                 "reveal": "always",
+//                 "revealProblems": "onProblem",
+//                 "close": true
+//             },
+//         }
+//     ]
+// }
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build-Debug",
+      "type": "shell",
+      "command": "make",
+      "args": ["debug"],
+      "options": {
+        "env": {
+          "GCC_COLORS": "error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01"
+        }
+      },
+      "problemMatcher": ["$gcc"],
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "revealProblems": "onProblem",
+        "close": true
+      }
+    },
+    {
+      "label": "Build-Release",
+      "type": "shell",
+      "command": "make",
+      "args": ["release"],
+      "options": {
+        "env": {
+          "GCC_COLORS": "error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01"
+        }
+      },
+      "problemMatcher": ["$gcc"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "revealProblems": "onProblem",
+        "close": true
+      }
+    },
+    {
+      "label": "Clean",
+      "type": "shell",
+      "command": "make",
+      "args": ["clean"],
+      "presentation": {
+        "reveal": "always",
+        "close": true
+      }
+    },
+    {
+      "label": "Run",
+      "type": "shell",
+      "command": "make",
+      "args": ["run"],
+      "presentation": {
+        "reveal": "always",
+        "close": true
+      }
+    }
+  ]
+}
