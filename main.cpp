@@ -3,7 +3,6 @@
 CONST COLORREF red = RGB(218, 59, 47);
 CONST COLORREF green = RGB(104, 218, 61);
 WCHAR RootPath[MAX_PATH];
-WCHAR SiteName[100];
 HINSTANCE hInst = NULL;
 HWND hWindow = NULL;
 HANDLE hExitApache = NULL;
@@ -45,6 +44,52 @@ VOID ApplyDarkThemeToApp(HWND hWnd)
     FreeLibrary(hUxtheme);
   }
   EnumChildWindows(hWnd, ApplyThemeToChild, (LPARAM)TRUE);
+}
+
+VOID BrowseForFolder(HWND hWnd)
+{
+  IFileOpenDialog *pFileOpen = nullptr;
+  HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_ALL, IID_PPV_ARGS(&pFileOpen));
+  if (SUCCEEDED(hr))
+  {
+    DWORD dwOptions;
+    if (SUCCEEDED(pFileOpen->GetOptions(&dwOptions)))
+    {
+      pFileOpen->SetOptions(dwOptions | FOS_PICKFOLDERS);
+      pFileOpen->SetTitle(L"Select Document Root Folder...");
+    }
+
+    if (!Options.Hdoc.empty())
+    {
+      IShellItem *pDefaultItem = nullptr;
+      hr = SHCreateItemFromParsingName(Options.Hdoc.c_str(), NULL, IID_PPV_ARGS(&pDefaultItem));
+      if (SUCCEEDED(hr))
+      {
+        pFileOpen->SetFolder(pDefaultItem);
+        pDefaultItem->Release();
+      }
+    }
+    hr = pFileOpen->Show(hWnd);
+    if (SUCCEEDED(hr))
+    {
+      IShellItem *pItem = nullptr;
+      hr = pFileOpen->GetResult(&pItem);
+      if (SUCCEEDED(hr))
+      {
+        PWSTR pszFilePath = nullptr;
+        hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
+
+        if (SUCCEEDED(hr))
+        {
+          Options.Hdoc = pszFilePath;
+          SendDlgItemMessage(hWnd, IDC_EDIT_DOC_ROOT, WM_SETTEXT, 0, (LPARAM)Options.Hdoc.c_str());
+          CoTaskMemFree(pszFilePath);
+        }
+        pItem->Release();
+      }
+    }
+    pFileOpen->Release();
+  }
 }
 
 bool UpdatePhpConfig()
@@ -1250,47 +1295,7 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
       }
       case IDC_SET_DOCROOT:
       {
-        IFileOpenDialog *pFileOpen = nullptr;
-        HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_ALL, IID_PPV_ARGS(&pFileOpen));
-        if (SUCCEEDED(hr))
-        {
-          DWORD dwOptions;
-          if (SUCCEEDED(pFileOpen->GetOptions(&dwOptions)))
-          {
-            pFileOpen->SetOptions(dwOptions | FOS_PICKFOLDERS);
-          }
-
-          if (!Options.Hdoc.empty())
-          {
-            IShellItem *pDefaultItem = nullptr;
-            hr = SHCreateItemFromParsingName(Options.Hdoc.c_str(), NULL, IID_PPV_ARGS(&pDefaultItem));
-            if (SUCCEEDED(hr))
-            {
-              pFileOpen->SetFolder(pDefaultItem);
-              pDefaultItem->Release();
-            }
-          }
-          hr = pFileOpen->Show(hWnd);
-          if (SUCCEEDED(hr))
-          {
-            IShellItem *pItem = nullptr;
-            hr = pFileOpen->GetResult(&pItem);
-            if (SUCCEEDED(hr))
-            {
-              PWSTR pszFilePath = nullptr;
-              hr = pItem->GetDisplayName(SIGDN_FILESYSPATH, &pszFilePath);
-
-              if (SUCCEEDED(hr))
-              {
-                Options.Hdoc = pszFilePath;
-                SendDlgItemMessage(hWnd, IDC_EDIT_DOC_ROOT, WM_SETTEXT, 0, (LPARAM)Options.Hdoc.c_str());
-                CoTaskMemFree(pszFilePath);
-              }
-              pItem->Release();
-            }
-          }
-          pFileOpen->Release();
-        }
+        BrowseForFolder(hWnd);
         break;
       }
       case IDC_THANKS:
@@ -1611,6 +1616,9 @@ INT WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
   UpdateUserPathVar();
 
   OptionsGet();
+
+  if (Options.Hdoc.empty())
+    BrowseForFolder(GetDesktopWindow());
 
   if (ApacheOk && PhpOk && Options.AutoStartApache && !ApachePID)
     NewJob(StartApacheThread);
