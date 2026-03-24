@@ -17,10 +17,12 @@
 #define IDD_APP_DIALOG                          116
 #define IDD_THANKS                              128
 #define IDD_ABOUT                               129
+#define IDR_AVI                                 131
 #define IDC_RADIO1                              40000
 #define IDC_RADIO2                              40001
 #define IDC_RADIO3                              40002
 #define IDC_ROOTPATH                            40004
+#define IDD_ANIMATION                           40005
 #define IDC_CHECK_AUTO_APACHE                   40006
 #define IDC_CHECK_AUTO_MARIA                    40007
 #define IDC_USEHTTPS                            40008
