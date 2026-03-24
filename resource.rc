@@ -9,6 +9,10 @@
 
 
 
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+IDR_AVI            AVI            ".\\assets\\output.avi"
+
+
 //
 // Menu resources
 //
