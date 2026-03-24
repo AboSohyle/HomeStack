@@ -1151,6 +1151,9 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
       StringCchPrintf(refresh, 25, L"Refresh %d", (int)SiteList.size());
       SetDlgItemText(hWnd, IDC_REFRESH, refresh);
     }
+    HWND hAni = GetDlgItem(hWnd, IDD_ANIMATION);
+    Animate_OpenEx(hAni, hInst, MAKEINTRESOURCE(IDR_AVI));
+    SetWindowPos(hAni, NULL, 1, 0, 611, 2, SWP_SHOWWINDOW | SWP_NOMOVE);
 
     NewJob(GetVersionsThread);
 
@@ -1318,6 +1321,7 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
             NewJob(KillMariaThread);
         }
 
+        Animate_Close(GetDlgItem(hWnd, IDD_ANIMATION));
         if (!IsWindowEnabled(GetDlgItem(hWnd, IDC_CHECK_CLEAR_LOGS)) && Options.ClearAllLogsOnQiut)
           Options.ClearAllLogsOnQiut = 0;
 
@@ -1422,6 +1426,7 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
   case WM_NOTIFYSTATE:
   {
+    HWND hAni = GetDlgItem(hWindow, IDD_ANIMATION);
     if (ApachePID)
     {
       SetWindowText(GetDlgItem(hWindow, IDC_APACHE_START), L"Stop");
@@ -1429,10 +1434,14 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
       EnableWindow(GetDlgItem(hWindow, IDC_PHP_INFO), TRUE);
       InvalidateRect(GetDlgItem(hWindow, IDC_APACHE_STATIC), 0, 0);
       if (MariaPID)
+      {
+        Animate_Play(hAni, 0, -1, -1);
         EnableWindow(GetDlgItem(hWindow, IDC_PHPMYADMIN), PmaOk);
+      }
     }
     else
     {
+      Animate_Stop(hAni);
       SetWindowText(GetDlgItem(hWindow, IDC_APACHE_START), L"Start");
       EnableWindow(GetDlgItem(hWindow, IDC_APACHE_RESET), FALSE);
       EnableWindow(GetDlgItem(hWindow, IDC_PHP_INFO), FALSE);
@@ -1447,6 +1456,7 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     }
     else
     {
+      Animate_Stop(hAni);
       SetWindowText(GetDlgItem(hWindow, IDC_MARIA_START), L"Start");
       EnableWindow(GetDlgItem(hWindow, IDC_MARIA_RESET), FALSE);
       EnableWindow(GetDlgItem(hWindow, IDC_PHPMYADMIN), FALSE);
