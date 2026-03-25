@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="screenshot.png" alt="HomeStack Interface" width="606">
+  <img src="screenshot.png" alt="HomeStack Interface" width="810">
 </p>
 <p align="center">
   <img src="contextmenu.png" alt="HomeStack Interface" width="405">
