@@ -1,20 +1,17 @@
 #include "main.h"
 
-CONST COLORREF red = RGB(218, 59, 47);
-CONST COLORREF green = RGB(104, 218, 61);
 WCHAR RootPath[MAX_PATH];
 HINSTANCE hInst = NULL;
 HWND hWindow = NULL;
 HANDLE hExitApache = NULL;
 HANDLE hExitMaria = NULL;
-HBRUSH hbrDark = NULL;
 DWORD ApachePID = 0;
 DWORD MariaPID = 0;
+HBRUSH hbrDark = NULL;
 vector<wstring> SiteList;
 WCHAR VersionStr[5][20];
 OPTIONS Options = {NORMAL, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, L""};
-BOOL ApacheOk, MariaOk, PhpOk, ComposerOk, PmaOk;
-BOOL NotifyAdded = FALSE;
+BOOL ApacheOk, MariaOk, PhpOk, ComposerOk, PmaOk, NotifyAdded = FALSE;
 
 BOOL CALLBACK ApplyThemeToChild(HWND hChild, LPARAM lParam)
 {
@@ -262,20 +259,6 @@ bool UpdateUserPathVar()
   SendMessageTimeoutW(HWND_BROADCAST, WM_SETTINGCHANGE, 0, (LPARAM)L"Environment", SMTO_ABORTIFHUNG, 2000, NULL);
 
   return (status == ERROR_SUCCESS);
-}
-
-BOOL IsInPath(LPCWSTR name, LPCWSTR ext)
-{
-  LPTSTR lpFilePart;
-  WCHAR outPath[MAX_PATH];
-  DWORD result = SearchPath(NULL, name, ext, MAX_PATH, outPath, &lpFilePart);
-  if (result > 0)
-  {
-    int len = lstrlen(outPath);
-    outPath[len - (2 * lstrlen(name) + 2 + lstrlen(ext))] = 0;
-    return (_wcsicmp(RootPath, outPath) == 0);
-  }
-  return 0;
 }
 
 VOID GetLastErrorMessage()
@@ -587,30 +570,7 @@ VOID FindOnlineServices()
   }
   CloseHandle(hSnapshot);
 
-  if (ApachePID)
-  {
-    SetWindowText(GetDlgItem(hWindow, IDC_APACHE_START), L"Stop");
-    EnableWindow(GetDlgItem(hWindow, IDC_APACHE_RESET), TRUE);
-    EnableWindow(GetDlgItem(hWindow, IDC_PHP_INFO), TRUE);
-    if (MariaPID)
-      EnableWindow(GetDlgItem(hWindow, IDC_PHPMYADMIN), PmaOk);
-  }
-  if (MariaPID)
-  {
-    SetWindowText(GetDlgItem(hWindow, IDC_MARIA_START), L"Stop");
-    EnableWindow(GetDlgItem(hWindow, IDC_MARIA_RESET), TRUE);
-  }
-  HICON icn;
-  if (ApachePID && MariaPID)
-  {
-    icn = (HICON)LoadImage(hInst, MAKEINTRESOURCE(IDI_APPICON_ON), IMAGE_ICON, 48, 48, LR_SHARED);
-    SendDlgItemMessage(hWindow, IDC_LOGO, STM_SETICON, (WPARAM)icn, 0);
-  }
-  else if (ApachePID || MariaPID)
-  {
-    icn = (HICON)LoadImage(hInst, MAKEINTRESOURCE(IDI_APPICON_ONOFF), IMAGE_ICON, 48, 48, LR_SHARED);
-    SendDlgItemMessage(hWindow, IDC_LOGO, STM_SETICON, (WPARAM)icn, 0);
-  }
+  PostMessage(hWindow, WM_NOTIFYSTATE, 0, 0);
 }
 
 VOID OptionsGet()
@@ -1109,6 +1069,10 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     hWindow = hWnd;
     ApplyDarkThemeToApp(hWnd);
 
+    HWND hAni = GetDlgItem(hWnd, IDD_ANIMATION);
+    Animate_OpenEx(hAni, hInst, MAKEINTRESOURCE(IDR_AVI));
+    SetWindowPos(hAni, NULL, 1, 0, 611, 1, SWP_SHOWWINDOW | SWP_NOMOVE);
+
     SendDlgItemMessage(hWindow, IDC_ROOTPATH, WM_SETTEXT, 0, (LPARAM)RootPath);
     SendDlgItemMessage(hWindow, IDC_EDIT_DOC_ROOT, WM_SETTEXT, 0, (LPARAM)Options.Hdoc.c_str());
     if (Options.HTTPs)
@@ -1133,27 +1097,14 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     if (Options.ClearAllLogsOnQiut)
       SendDlgItemMessage(hWindow, IDC_CHECK_CLEAR_LOGS, BM_SETCHECK, 1, 0);
 
-    if (IsInPath(L"php", L".exe") && IsInPath(L"composer", L".bat"))
-      SendDlgItemMessage(hWindow, IDC_USERPATH, BM_SETCHECK, 1, 0);
+    SendDlgItemMessage(hWindow, IDC_USERPATH, BM_SETCHECK, 1, 0);
 
-    EnableWindow(GetDlgItem(hWindow, IDC_APACHE_START), ApacheOk && PhpOk);
-    EnableWindow(GetDlgItem(hWindow, IDC_MARIA_START), MariaOk);
+    FindOnlineServices();
+
     EnableWindow(GetDlgItem(hWindow, IDC_APACHE_ACCESS), ApacheOk && PhpOk);
     EnableWindow(GetDlgItem(hWindow, IDC_APACHE_ERROR), ApacheOk && PhpOk);
     EnableWindow(GetDlgItem(hWindow, IDC_MARIA_ERROR), MariaOk);
     EnableWindow(GetDlgItem(hWindow, IDC_PHP_ERROR), PhpOk);
-
-    FindOnlineServices();
-
-    if (SiteList.size())
-    {
-      WCHAR refresh[25];
-      StringCchPrintf(refresh, 25, L"Refresh %d", (int)SiteList.size());
-      SetDlgItemText(hWnd, IDC_REFRESH, refresh);
-    }
-    HWND hAni = GetDlgItem(hWnd, IDD_ANIMATION);
-    Animate_OpenEx(hAni, hInst, MAKEINTRESOURCE(IDR_AVI));
-    SetWindowPos(hAni, NULL, 1, 0, 611, 2, SWP_SHOWWINDOW | SWP_NOMOVE);
 
     NewJob(GetVersionsThread);
 
@@ -1489,6 +1440,8 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     HDC hdcStatic = (HDC)wParam;
     SetBkMode(hdcStatic, TRANSPARENT);
     SetTextColor(hdcStatic, RGB(229, 229, 229));
+    CONST COLORREF red = RGB(218, 59, 47);
+    CONST COLORREF green = RGB(104, 218, 61);
     HWND hStatic = (HWND)lParam;
 
     if (hStatic == GetDlgItem(hWnd, IDC_APACHE_STATIC))
