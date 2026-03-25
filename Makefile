@@ -12,8 +12,8 @@ CDEFFLAGS := -std=c++20 -Wall -Wextra -Wpedantic -Wconversion -fdiagnostics-colo
 LIBS      := -municode -mwindows -lcomctl32 -lpathcch -ldwmapi -lole32 -lwininet -loleaut32 -luuid -lshlwapi -luxtheme
 CFLAGS    := -O2 -flto -march=native -ffunction-sections -fdata-sections -fno-ident -DNDEBUG -static -fno-rtti
 CDEBFLAGS := -Og -g3 -fno-omit-frame-pointer -D_DEBUG -DDEBUG
-LDFLAGS   := -Wl,--gc-sections,--strip-all,--allow-multiple-definition -flto
-LDEBFLAGS := -Wl,--allow-multiple-definition
+LDFLAGS   := -Wl,--gc-sections,--strip-all -flto
+LDEBFLAGS := -Wl
 
 # --- Flags UCRT linking ---
 # CDEFFLAGS := -std=c++20 -Wall -Wextra -Wpedantic -Wconversion -fdiagnostics-color=always -I. -MMD -MP -D_UCRT
