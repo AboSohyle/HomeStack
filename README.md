@@ -20,9 +20,9 @@
 
 ## 🛠 Requirements
 
-Before building or running HomeStack, ensure you have the following tools configured:
+Before building HomeStack, ensure you have the following tools configured:
 
-- **C/C++ Compiler**: [winlibs-w64ucrt](https://winlibs.com/) is recommended for native Windows compatibility.
+- **C/C++ Compiler**: [winlibs-w64ucrt](https://winlibs.com/) is recommended for this biuld.
 - **Make**: Use `mingw32-make.exe`.
   - _Tip: Rename `mingw32-make.exe` to `make.exe` in your `../GCCx64/bin` folder for easier command-line usage._
 - **Resource Editor**: [ResEdit](https://resedit.apponic.com/) for managing application icons and metadata.
