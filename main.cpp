@@ -992,36 +992,28 @@ INT_PTR CALLBACK AcknowledgeProc(HWND hPage, UINT msg, WPARAM wParam, LPARAM lPa
   {
     ApplyDarkThemeToApp(hPage);
     HFONT fn = (HFONT)SendMessage(hPage, WM_GETFONT, 0, 0);
-    HWND h0, h1, h2, h3, h4, h5, h6;
-    h0 = CreateWindow(WC_LINK,
-                      L"<A HREF=\"https://winlibs.com/\">WinLibs:</A> For providing the WinLibs standalone build of GCC and MinGW-w64, and ",
-                      WS_VISIBLE | WS_CHILD, 117, 75, 470, 15, hPage, (HMENU)1200, hInst, NULL);
-    h6 = CreateWindow(WC_LINK,
-                      L"<A HREF=\"https://resedit.apponic.com/\">ResEdit:</A> A resource editor for Windows, Both are the essential toolchain used to build and run this application on Windows.",
-                      WS_VISIBLE | WS_CHILD, 117, 90, 465, 32, hPage, (HMENU)1200, hInst, NULL);
+    HWND h1, h2, h3, h4, h5;
     h1 = CreateWindow(WC_LINK,
                       L"The <A HREF=\"https://www.apachelounge.com/\">Apache Software Foundation:</A> For providing the Apache HTTP Server, which serves as the reliable web gateway for the controller's user interface.",
-                      WS_VISIBLE | WS_CHILD, 117, 135, 470, 32, hPage, (HMENU)1200, hInst, NULL);
+                      WS_VISIBLE | WS_CHILD, 90, 64, 460, 32, hPage, (HMENU)1200, hInst, NULL);
     h2 = CreateWindow(WC_LINK,
                       L"The <A HREF=\"https://www.apachelounge.com/\">MariaDB Foundation:</A> For MariaDB, which provides the high-performance database used to log device states and home telemetry data.",
-                      WS_VISIBLE | WS_CHILD, 117, 190, 470, 32, hPage, (HMENU)1201, hInst, NULL);
+                      WS_VISIBLE | WS_CHILD, 90, 120, 460, 32, hPage, (HMENU)1201, hInst, NULL);
     h3 = CreateWindow(WC_LINK,
                       L"The <A HREF=\"https://www.php.net/\">PHP Group:</A> For the PHP scripting language, used to develop the core logic and automation scripts of the stack.",
-                      WS_VISIBLE | WS_CHILD, 117, 242, 470, 32, hPage, (HMENU)1202, hInst, NULL);
+                      WS_VISIBLE | WS_CHILD, 90, 175, 460, 32, hPage, (HMENU)1202, hInst, NULL);
     h4 = CreateWindow(WC_LINK,
                       L"The <A HREF=\"https://getcomposer.org/\">Composer Team:</A> For Composer, the dependency manager that streamlined the integration of various PHP libraries used in this project.",
-                      WS_VISIBLE | WS_CHILD, 117, 295, 470, 32, hPage, (HMENU)1203, hInst, NULL);
+                      WS_VISIBLE | WS_CHILD, 90, 230, 460, 32, hPage, (HMENU)1203, hInst, NULL);
     h5 = CreateWindow(WC_LINK,
                       L"The <A HREF=\"https://www.phpmyadmin.net/\">phpMyAdmin Project:</A> For phpMyAdmin, which served as the primary interface for managing and debugging the system's database.",
-                      WS_VISIBLE | WS_CHILD, 117, 352, 470, 32, hPage, (HMENU)1204, hInst, NULL);
+                      WS_VISIBLE | WS_CHILD, 90, 282, 460, 32, hPage, (HMENU)1204, hInst, NULL);
 
-    SendMessage(h0, WM_SETFONT, (WPARAM)fn, 1);
     SendMessage(h1, WM_SETFONT, (WPARAM)fn, 1);
     SendMessage(h2, WM_SETFONT, (WPARAM)fn, 1);
     SendMessage(h3, WM_SETFONT, (WPARAM)fn, 1);
     SendMessage(h4, WM_SETFONT, (WPARAM)fn, 1);
     SendMessage(h5, WM_SETFONT, (WPARAM)fn, 1);
-    SendMessage(h6, WM_SETFONT, (WPARAM)fn, 1);
 
     return (INT_PTR)TRUE;
   }
@@ -1040,6 +1032,16 @@ INT_PTR CALLBACK AcknowledgeProc(HWND hPage, UINT msg, WPARAM wParam, LPARAM lPa
   {
     EndDialog(hPage, 0);
     return (INT_PTR)TRUE;
+  }
+
+  case WM_COMMAND:
+  {
+    if (LOWORD(wParam) == IDOK)
+    {
+      EndDialog(hPage, 0);
+      return (INT_PTR)TRUE;
+    }
+    break;
   }
 
   case WM_CTLCOLORSTATIC:
@@ -1071,6 +1073,16 @@ INT_PTR CALLBACK AboutProc(HWND hPage, UINT msg, WPARAM wParam, LPARAM)
     return (INT_PTR)TRUE;
   }
 
+  case WM_COMMAND:
+  {
+    if (LOWORD(wParam) == IDOK)
+    {
+      EndDialog(hPage, 0);
+      return (INT_PTR)TRUE;
+    }
+    break;
+  }
+
   case WM_CTLCOLORSTATIC:
   case WM_CTLCOLORDLG:
   case WM_CTLCOLORBTN:
@@ -1096,6 +1108,8 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     HWND hAni = GetDlgItem(hWnd, IDD_ANIMATION);
     Animate_OpenEx(hAni, hInst, MAKEINTRESOURCE(IDR_AVI));
     SetWindowPos(hAni, NULL, 0, 0, 606, 1, SWP_HIDEWINDOW | SWP_NOMOVE);
+
+    FindOnlineServices();
 
     SendDlgItemMessage(hWindow, IDC_ROOTPATH, WM_SETTEXT, 0, (LPARAM)RootPath);
     SendDlgItemMessage(hWindow, IDC_EDIT_DOC_ROOT, WM_SETTEXT, 0, (LPARAM)Options.Hdoc.c_str());
@@ -1126,8 +1140,6 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     NewJob(LogFileMonitorThread);
 
     NewJob(GetVersionsThread);
-
-    FindOnlineServices();
 
     if (Options.StartUp == MINIMIZED)
       ShowWindow(hWindow, SW_SHOWMINIMIZED);

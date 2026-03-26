@@ -11,8 +11,6 @@
 #define IDI_PHP                                 106
 #define IDI_COMPOSER                            107
 #define IDI_PMA                                 108
-#define IDI_GCC                                 109
-#define IDI_RES                                 110
 #define IDM_CONTEXTMENU                         115
 #define IDD_APP_DIALOG                          116
 #define IDD_THANKS                              128
