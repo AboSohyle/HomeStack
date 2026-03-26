@@ -1,9 +1,5 @@
 <p align="center">
-  <img src="images/screenshot.png" alt="HomeStack Interface" width="810">
-</p>
-<p align="center">
-  <img src="images/contextmenu.png" alt="HomeStack Interface" width="405">
-  <img src="images/contextmenu2.png" alt="HomeStack Interface" width="405">
+  <img src="images/screenshot.png" alt="HomeStack Interface" width="640">
 </p>
 
 # 🏠 HomeStack
