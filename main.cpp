@@ -267,14 +267,6 @@ BOOL FileExists(LPCWSTR file)
   return (attrib != INVALID_FILE_ATTRIBUTES && attrib != FILE_ATTRIBUTE_DIRECTORY);
 }
 
-VOID OpenSiteInBrowser(int index)
-{
-  WCHAR path[MAX_PATH];
-  StringCchPrintf(path, MAX_PATH, L"%s://localhost/", Options.HTTPs ? L"https" : L"http");
-  StringCchCat(path, MAX_PATH, SiteList[index].c_str());
-  ShellExecute(NULL, L"open", path, NULL, NULL, SW_SHOWNORMAL);
-}
-
 VOID NewJob(PTHREAD_START routine)
 {
   HANDLE hand = (HANDLE)_beginthreadex(NULL, 0, routine, NULL, 0, NULL);
@@ -619,7 +611,7 @@ VOID MenuUpdateSiteList(HMENU hPop)
 {
   int SiteCount = (int)SiteList.size();
   WCHAR refresh[25];
-  StringCchPrintf(refresh, 25, L"Refresh %d", SiteCount);
+  StringCchPrintf(refresh, 25, L"Refresh [%d]", SiteCount);
   MenuSetItemText(hPop, IDC_REFRESH, refresh);
   EnableMenuItem(hPop, IDC_REFRESH, MF_BYCOMMAND | ((SiteCount > 0) ? MF_ENABLED : MF_GRAYED));
 
@@ -630,20 +622,6 @@ VOID MenuUpdateSiteList(HMENU hPop)
     if (!ApachePID)
       EnableMenuItem(hPop, id, MF_BYCOMMAND | MF_GRAYED);
   }
-}
-
-VOID MenuShowContext(HWND hWnd, HMENU hMenu)
-{
-  SetForegroundWindow(hWnd);
-  UINT uFlags = TPM_RIGHTBUTTON;
-  if (GetSystemMetrics(SM_MENUDROPALIGNMENT) != 0)
-    uFlags |= TPM_RIGHTALIGN;
-  else
-    uFlags |= TPM_LEFTALIGN;
-
-  POINT pt;
-  GetCursorPos(&pt);
-  TrackPopupMenuEx(hMenu, uFlags, pt.x, pt.y, hWindow, NULL);
 }
 
 DWORD GetConsoleOutput(LPCWSTR Cmd, LPWSTR Out, int length)
@@ -1139,7 +1117,13 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
   case WM_COMMAND:
   {
     if (LOWORD(wParam) >= IDM_ROOTFOLDER && LOWORD(wParam) < (IDM_ROOTFOLDER + SiteList.size()))
-      OpenSiteInBrowser(LOWORD(wParam) - IDM_ROOTFOLDER);
+    {
+      int index = LOWORD(wParam) - IDM_ROOTFOLDER;
+      WCHAR path[MAX_PATH];
+      StringCchPrintf(path, MAX_PATH, L"%s://localhost/", Options.HTTPs ? L"https" : L"http");
+      StringCchCat(path, MAX_PATH, SiteList[index].c_str());
+      ShellExecute(NULL, L"open", path, NULL, NULL, SW_SHOWNORMAL);
+    }
     else
     {
       switch (LOWORD(wParam))
@@ -1399,7 +1383,17 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
           EnableMenuItem(hSubMenu, IDC_PHP_INFO, MF_BYCOMMAND | ((ApachePID && MariaPID) ? MF_ENABLED : MF_GRAYED));
 
           MenuUpdateSiteList(GetSubMenu(hSubMenu, 7));
-          MenuShowContext(hWnd, hSubMenu);
+
+          SetForegroundWindow(hWnd);
+          UINT uFlags = TPM_RIGHTBUTTON;
+          if (GetSystemMetrics(SM_MENUDROPALIGNMENT) != 0)
+            uFlags |= TPM_RIGHTALIGN;
+          else
+            uFlags |= TPM_LEFTALIGN;
+
+          POINT pt;
+          GetCursorPos(&pt);
+          TrackPopupMenuEx(hSubMenu, uFlags, pt.x, pt.y, hWindow, NULL);
         }
         DestroyMenu(hMenu);
       }
