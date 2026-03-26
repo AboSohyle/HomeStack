@@ -16,6 +16,7 @@
 #define IDD_THANKS                              128
 #define IDD_ABOUT                               129
 #define IDR_AVI                                 131
+#define IDI_GITHUB                              133
 #define IDC_RADIO1                              40000
 #define IDC_RADIO2                              40001
 #define IDC_RADIO3                              40002
