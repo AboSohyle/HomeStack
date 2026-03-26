@@ -1071,7 +1071,7 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
     HWND hAni = GetDlgItem(hWnd, IDD_ANIMATION);
     Animate_OpenEx(hAni, hInst, MAKEINTRESOURCE(IDR_AVI));
-    SetWindowPos(hAni, NULL, 1, 0, 611, 1, SWP_SHOWWINDOW | SWP_NOMOVE);
+    SetWindowPos(hAni, NULL, 0, 0, 606, 1, SWP_SHOWWINDOW | SWP_NOMOVE);
 
     SendDlgItemMessage(hWindow, IDC_ROOTPATH, WM_SETTEXT, 0, (LPARAM)RootPath);
     SendDlgItemMessage(hWindow, IDC_EDIT_DOC_ROOT, WM_SETTEXT, 0, (LPARAM)Options.Hdoc.c_str());
