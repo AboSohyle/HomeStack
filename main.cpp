@@ -569,8 +569,6 @@ VOID FindOnlineServices()
     } while ((!apacheFound || !mariaFound) && Process32Next(hSnapshot, &pe32));
   }
   CloseHandle(hSnapshot);
-
-  PostMessage(hWindow, WM_NOTIFYSTATE, 0, 0);
 }
 
 VOID OptionsGet()
@@ -1109,8 +1107,6 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     Animate_OpenEx(hAni, hInst, MAKEINTRESOURCE(IDR_AVI));
     SetWindowPos(hAni, NULL, 0, 0, 606, 1, SWP_HIDEWINDOW | SWP_NOMOVE);
 
-    FindOnlineServices();
-
     SendDlgItemMessage(hWindow, IDC_ROOTPATH, WM_SETTEXT, 0, (LPARAM)RootPath);
     SendDlgItemMessage(hWindow, IDC_EDIT_DOC_ROOT, WM_SETTEXT, 0, (LPARAM)Options.Hdoc.c_str());
     if (Options.HTTPs)
@@ -1136,6 +1132,12 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
       SendDlgItemMessage(hWindow, IDC_CHECK_CLEAR_LOGS, BM_SETCHECK, 1, 0);
 
     SendDlgItemMessage(hWindow, IDC_USERPATH, BM_SETCHECK, 1, 0);
+
+    if (ApachePID || MariaPID)
+    {
+      PostMessage(hWindow, WM_NOTIFYSTATE, 0, 0);
+      PostMessage(hWindow, WM_NOTIFYLOGFILES, 0, 0);
+    }
 
     NewJob(LogFileMonitorThread);
 
@@ -1622,6 +1624,8 @@ INT WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
 
   if (Options.Hdoc.empty())
     BrowseForFolder(GetDesktopWindow());
+
+  FindOnlineServices();
 
   if (ApacheOk && PhpOk && Options.AutoStartApache && !ApachePID)
     NewJob(StartApacheThread);
