@@ -953,19 +953,19 @@ INT_PTR CALLBACK AcknowledgeProc(HWND hPage, UINT msg, WPARAM wParam, LPARAM lPa
     HWND h1, h2, h3, h4, h5;
     h1 = CreateWindow(WC_LINK,
                       L"The <A HREF=\"https://www.apachelounge.com/\">Apache Software Foundation:</A> For providing the Apache HTTP Server, which serves as the reliable web gateway for the controller's user interface.",
-                      WS_VISIBLE | WS_CHILD, 90, 64, 460, 32, hPage, (HMENU)1200, hInst, NULL);
+                      WS_VISIBLE | WS_CHILD, 87, 64, 460, 32, hPage, (HMENU)1200, hInst, NULL);
     h2 = CreateWindow(WC_LINK,
                       L"The <A HREF=\"https://www.apachelounge.com/\">MariaDB Foundation:</A> For MariaDB, which provides the high-performance database used to log device states and home telemetry data.",
-                      WS_VISIBLE | WS_CHILD, 90, 120, 460, 32, hPage, (HMENU)1201, hInst, NULL);
+                      WS_VISIBLE | WS_CHILD, 87, 120, 460, 32, hPage, (HMENU)1201, hInst, NULL);
     h3 = CreateWindow(WC_LINK,
                       L"The <A HREF=\"https://www.php.net/\">PHP Group:</A> For the PHP scripting language, used to develop the core logic and automation scripts of the stack.",
-                      WS_VISIBLE | WS_CHILD, 90, 175, 460, 32, hPage, (HMENU)1202, hInst, NULL);
+                      WS_VISIBLE | WS_CHILD, 87, 175, 460, 32, hPage, (HMENU)1202, hInst, NULL);
     h4 = CreateWindow(WC_LINK,
                       L"The <A HREF=\"https://getcomposer.org/\">Composer Team:</A> For Composer, the dependency manager that streamlined the integration of various PHP libraries used in this project.",
-                      WS_VISIBLE | WS_CHILD, 90, 230, 460, 32, hPage, (HMENU)1203, hInst, NULL);
+                      WS_VISIBLE | WS_CHILD, 87, 230, 460, 32, hPage, (HMENU)1203, hInst, NULL);
     h5 = CreateWindow(WC_LINK,
                       L"The <A HREF=\"https://www.phpmyadmin.net/\">phpMyAdmin Project:</A> For phpMyAdmin, which served as the primary interface for managing and debugging the system's database.",
-                      WS_VISIBLE | WS_CHILD, 90, 282, 460, 32, hPage, (HMENU)1204, hInst, NULL);
+                      WS_VISIBLE | WS_CHILD, 87, 282, 460, 32, hPage, (HMENU)1204, hInst, NULL);
 
     SendMessage(h1, WM_SETFONT, (WPARAM)fn, 1);
     SendMessage(h2, WM_SETFONT, (WPARAM)fn, 1);
@@ -1015,14 +1015,34 @@ INT_PTR CALLBACK AcknowledgeProc(HWND hPage, UINT msg, WPARAM wParam, LPARAM lPa
   return (INT_PTR)FALSE;
 }
 
-INT_PTR CALLBACK AboutProc(HWND hPage, UINT msg, WPARAM wParam, LPARAM)
+INT_PTR CALLBACK AboutProc(HWND hPage, UINT msg, WPARAM wParam, LPARAM lParam)
 {
   switch (msg)
   {
   case WM_INITDIALOG:
   {
     ApplyDarkThemeToApp(hPage);
+    HWND h1 = CreateWindow(WC_LINK,
+                           L"<A HREF=\"https://github.com/AboSohyle/HomeStack/\">repository</A>",
+                           WS_VISIBLE | WS_CHILD, 388, 45, 60, 16, hPage, (HMENU)1204, hInst, NULL);
+    HWND h2 = CreateWindow(WC_LINK,
+                           L"Built with <A HREF=\"https://winlibs.com/\">winlibs</A>.",
+                           WS_VISIBLE | WS_CHILD, 14, 238, 278, 16, hPage, (HMENU)1204, hInst, NULL);
+
+    HFONT fn = (HFONT)SendMessage(hPage, WM_GETFONT, 0, 0);
+    SendMessage(h1, WM_SETFONT, (WPARAM)fn, 1);
+    SendMessage(h2, WM_SETFONT, (WPARAM)fn, 1);
     return (INT_PTR)TRUE;
+  }
+
+  case WM_NOTIFY:
+  {
+    if (((LPNMHDR)lParam)->code == NM_CLICK)
+    {
+      PNMLINK pNMLink = (PNMLINK)lParam;
+      ShellExecute(NULL, L"open", pNMLink->item.szUrl, NULL, NULL, SW_SHOWNORMAL);
+    }
+    return (INT_PTR)FALSE;
   }
 
   case WM_CLOSE:
