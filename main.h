@@ -36,6 +36,8 @@ using namespace std;
 #define WM_NOTIFYICON (WM_USER + 1)
 #define WM_NOTIFYSTATE (WM_USER + 2)
 #define WM_NOTIFYEXIT (WM_USER + 3)
+#define WM_NOTIFYLOGFILES (WM_USER + 4)
+
 #define IDM_ROOTFOLDER 11000
 
 typedef unsigned(__stdcall *PTHREAD_START)(void *);

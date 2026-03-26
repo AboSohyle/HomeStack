@@ -730,6 +730,30 @@ DWORD GetConsoleOutput(LPCWSTR Cmd, LPWSTR Out, int length)
   return totalRead;
 }
 
+UINT CALLBACK LogFileMonitorThread(LPVOID)
+{
+  if (!ApacheOk || !MariaOk || !PhpOk)
+    return 1;
+
+  wstring logFolder = wstring(RootPath) + L"\\logs";
+
+  HANDLE hNotify = FindFirstChangeNotification(logFolder.c_str(), FALSE, FILE_NOTIFY_CHANGE_FILE_NAME);
+  if (hNotify == INVALID_HANDLE_VALUE)
+    return 1;
+
+  while (true)
+  {
+    if (WaitForSingleObject(hNotify, INFINITE) == WAIT_OBJECT_0)
+    {
+      PostMessage(hWindow, WM_NOTIFYLOGFILES, 0, 0);
+      if (!FindNextChangeNotification(hNotify))
+        break;
+    }
+  }
+  FindCloseChangeNotification(hNotify);
+  return 0;
+}
+
 UINT CALLBACK StartApacheThread(LPVOID)
 {
   STARTUPINFO si;
@@ -1071,7 +1095,7 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
     HWND hAni = GetDlgItem(hWnd, IDD_ANIMATION);
     Animate_OpenEx(hAni, hInst, MAKEINTRESOURCE(IDR_AVI));
-    SetWindowPos(hAni, NULL, 0, 0, 606, 1, SWP_SHOWWINDOW | SWP_NOMOVE);
+    SetWindowPos(hAni, NULL, 0, 0, 606, 1, SWP_HIDEWINDOW | SWP_NOMOVE);
 
     SendDlgItemMessage(hWindow, IDC_ROOTPATH, WM_SETTEXT, 0, (LPARAM)RootPath);
     SendDlgItemMessage(hWindow, IDC_EDIT_DOC_ROOT, WM_SETTEXT, 0, (LPARAM)Options.Hdoc.c_str());
@@ -1099,14 +1123,11 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
     SendDlgItemMessage(hWindow, IDC_USERPATH, BM_SETCHECK, 1, 0);
 
-    FindOnlineServices();
-
-    EnableWindow(GetDlgItem(hWindow, IDC_APACHE_ACCESS), ApacheOk && PhpOk);
-    EnableWindow(GetDlgItem(hWindow, IDC_APACHE_ERROR), ApacheOk && PhpOk);
-    EnableWindow(GetDlgItem(hWindow, IDC_MARIA_ERROR), MariaOk);
-    EnableWindow(GetDlgItem(hWindow, IDC_PHP_ERROR), PhpOk);
+    NewJob(LogFileMonitorThread);
 
     NewJob(GetVersionsThread);
+
+    FindOnlineServices();
 
     if (Options.StartUp == MINIMIZED)
       ShowWindow(hWindow, SW_SHOWMINIMIZED);
@@ -1339,6 +1360,29 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     break;
   }
 
+  case WM_NOTIFYLOGFILES:
+  {
+    static const wchar_t *logFiles[] = {
+        L"\\logs\\access.log",
+        L"\\logs\\error.log",
+        L"\\logs\\mysql_error.log",
+        L"\\logs\\php_error.log"};
+
+    static const int controlIDs[] = {
+        IDC_APACHE_ACCESS,
+        IDC_APACHE_ERROR,
+        IDC_MARIA_ERROR,
+        IDC_PHP_ERROR};
+
+    for (int i = 0; i < 4; ++i)
+    {
+      wstring fullPath = wstring(RootPath) + logFiles[i];
+      BOOL exists = FileExists(fullPath.c_str());
+      EnableWindow(GetDlgItem(hWnd, controlIDs[i]), exists);
+    }
+    break;
+  }
+
   case WM_NOTIFYICON:
   {
     if (LOWORD(lParam) == WM_RBUTTONUP)
@@ -1378,47 +1422,31 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
   case WM_NOTIFYSTATE:
   {
     HWND hAni = GetDlgItem(hWindow, IDD_ANIMATION);
-    if (ApachePID)
-    {
-      SetWindowText(GetDlgItem(hWindow, IDC_APACHE_START), L"Stop");
-      EnableWindow(GetDlgItem(hWindow, IDC_APACHE_RESET), TRUE);
-      EnableWindow(GetDlgItem(hWindow, IDC_PHP_INFO), TRUE);
-      InvalidateRect(GetDlgItem(hWindow, IDC_APACHE_STATIC), 0, 0);
-      if (MariaPID)
-      {
-        Animate_Play(hAni, 0, -1, -1);
-        EnableWindow(GetDlgItem(hWindow, IDC_PHPMYADMIN), PmaOk);
-      }
-    }
-    else
-    {
-      Animate_Stop(hAni);
-      SetWindowText(GetDlgItem(hWindow, IDC_APACHE_START), L"Start");
-      EnableWindow(GetDlgItem(hWindow, IDC_APACHE_RESET), FALSE);
-      EnableWindow(GetDlgItem(hWindow, IDC_PHP_INFO), FALSE);
-      EnableWindow(GetDlgItem(hWindow, IDC_PHPMYADMIN), FALSE);
-      InvalidateRect(GetDlgItem(hWindow, IDC_APACHE_STATIC), 0, 0);
-    }
-    if (MariaPID)
-    {
-      SetWindowText(GetDlgItem(hWindow, IDC_MARIA_START), L"Stop");
-      EnableWindow(GetDlgItem(hWindow, IDC_MARIA_RESET), TRUE);
-      InvalidateRect(GetDlgItem(hWindow, IDC_MARIA_STATIC), 0, 0);
-    }
-    else
-    {
-      Animate_Stop(hAni);
-      SetWindowText(GetDlgItem(hWindow, IDC_MARIA_START), L"Start");
-      EnableWindow(GetDlgItem(hWindow, IDC_MARIA_RESET), FALSE);
-      EnableWindow(GetDlgItem(hWindow, IDC_PHPMYADMIN), FALSE);
-      InvalidateRect(GetDlgItem(hWindow, IDC_MARIA_STATIC), 0, 0);
-    }
+    BOOL Up = (ApachePID && MariaPID);
 
-    UINT icn = (ApachePID && MariaPID) ? IDI_APPICON_ON : ((ApachePID || MariaPID) ? IDI_APPICON_ONOFF : IDI_APPICON_OFF);
+    SetWindowPos(hAni, NULL, 0, 0, 0, 0, (Up ? SWP_SHOWWINDOW : SWP_HIDEWINDOW) | SWP_NOMOVE | SWP_NOSIZE);
+
+    if (Up)
+      Animate_Play(hAni, 0, -1, -1);
+    else
+      Animate_Stop(hAni);
+
+    SetWindowText(GetDlgItem(hWindow, IDC_APACHE_START), ApachePID ? L"Stop" : L"Start");
+    EnableWindow(GetDlgItem(hWindow, IDC_APACHE_RESET), ApachePID);
+    EnableWindow(GetDlgItem(hWindow, IDC_PHP_INFO), ApachePID);
+    InvalidateRect(GetDlgItem(hWindow, IDC_APACHE_STATIC), NULL, FALSE);
+
+    SetWindowText(GetDlgItem(hWindow, IDC_MARIA_START), MariaPID ? L"Stop" : L"Start");
+    EnableWindow(GetDlgItem(hWindow, IDC_MARIA_RESET), MariaPID);
+    InvalidateRect(GetDlgItem(hWindow, IDC_MARIA_STATIC), NULL, FALSE);
+
+    EnableWindow(GetDlgItem(hWindow, IDC_PHPMYADMIN), Up ? PmaOk : FALSE);
+
+    UINT icn = Up ? IDI_APPICON_ON : ((ApachePID || MariaPID) ? IDI_APPICON_ONOFF : IDI_APPICON_OFF);
     HICON hIcon = (HICON)LoadImage(hInst, MAKEINTRESOURCE(icn), IMAGE_ICON, 48, 48, LR_SHARED);
     SendDlgItemMessage(hWindow, IDC_LOGO, STM_SETICON, (WPARAM)hIcon, 0);
-    NotifyIcon(NotifyAdded);
 
+    NotifyIcon(NotifyAdded);
     break;
   }
 
