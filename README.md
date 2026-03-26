@@ -51,3 +51,7 @@ If you are initializing your database for the first time or resetting your envir
    ```bash
    mariadb-install-db.exe --datadir=../data
    ```
+
+## Contributing
+
+Contributions to the HomeStack project are welcome! Please feel free to fork the repository, make your changes, and submit a pull request.
