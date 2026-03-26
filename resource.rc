@@ -71,10 +71,11 @@ EXSTYLE WS_EX_TOOLWINDOW
 CAPTION "About"
 FONT 9, "Segoe UI"
 {
+    ICON            IDI_GITHUB, IDC_STATIC, 231, 11, 14, 13, SS_ICON | SS_REALSIZEIMAGE, WS_EX_LEFT
     DEFPUSHBUTTON   "OK", IDOK, 212, 124, 50, 14, 0, WS_EX_LEFT
     CONTROL         "", IDC_STATIC, WC_STATIC, SS_BLACKFRAME, 4, 46, 260, 73, WS_EX_LEFT
     LTEXT           "HomeStack  is  distributed  under the terms of the MIT license. See  LICENSE.md  for  details.", IDC_STATIC, 8, 96, 254, 17, SS_LEFT, WS_EX_LEFT
-    LTEXT           "(C) 2026 Wael Mohammed Ali", IDC_STATIC, 44, 28, 93, 9, SS_LEFT, WS_EX_LEFT
+    LTEXT           "(C) 2026 AboSoyle", IDC_STATIC, 44, 28, 57, 9, SS_LEFT, WS_EX_LEFT
     LTEXT           "HomeStack (x64)", IDC_STATIC, 44, 10, 57, 9, SS_LEFT, WS_EX_LEFT
     LTEXT           "1.0.0.0", IDC_STATIC, 44, 19, 24, 9, SS_LEFT, WS_EX_LEFT
     LTEXT           "HomeStack  is  a  portable  management  interface  for  orchestrating  local  server infrastructure on Windows. It provides a  native, stable  control  plane  for  the  AMP  stack  (Apache, MariaDB, PHP), pre-integrated with Composer and phpMyAdmin to deliver a seamless, high-performance local development environment for full-stack developers.", IDC_STATIC, 8, 50, 255, 41, SS_LEFT, WS_EX_LEFT
@@ -90,7 +91,7 @@ CAPTION "Home Stack v1.0"
 CLASS "AMPCTRLClass"
 FONT 9, "Segoe UI"
 {
-    EDITTEXT        IDC_EDIT_DOC_ROOT, 72, 138, 175, 8, NOT WS_BORDER | NOT WS_TABSTOP | ES_AUTOHSCROLL | ES_READONLY, WS_EX_LEFT
+    EDITTEXT        IDC_EDIT_DOC_ROOT, 72, 138, 175, 12, NOT WS_BORDER | NOT WS_TABSTOP | ES_AUTOHSCROLL | ES_READONLY, WS_EX_LEFT
     CONTROL         "", IDC_STATIC, WC_STATIC, SS_BLACKFRAME, 70, 136, 179, 12, WS_EX_LEFT
     CONTROL         "", IDD_ANIMATION, ANIMATE_CLASS, ACS_CENTER, 0, 0, 346, 6, WS_EX_LEFT
     AUTOCHECKBOX    "add Php and Composer to user PATH", IDC_USERPATH, 146, 156, 125, 8, 0, WS_EX_LEFT
@@ -108,7 +109,7 @@ FONT 9, "Segoe UI"
     AUTORADIOBUTTON "normal", IDC_RADIO1, 70, 100, 47, 13, BS_PUSHLIKE, WS_EX_LEFT
     AUTORADIOBUTTON "minimized", IDC_RADIO2, 122, 100, 47, 13, BS_PUSHLIKE, WS_EX_LEFT
     AUTORADIOBUTTON "system tray", IDC_RADIO3, 175, 100, 47, 13, BS_PUSHLIKE, WS_EX_LEFT
-    EDITTEXT        IDC_ROOTPATH, 71, 120, 197, 8, NOT WS_BORDER | ES_AUTOHSCROLL | ES_READONLY, WS_EX_LEFT
+    EDITTEXT        IDC_ROOTPATH, 71, 120, 197, 12, NOT WS_BORDER | ES_AUTOHSCROLL | ES_READONLY, WS_EX_LEFT
     CONTROL         "", IDC_STATIC, WC_STATIC, SS_BLACKFRAME, 70, 118, 199, 12, WS_EX_LEFT
     AUTOCHECKBOX    " auto start Apache", IDC_CHECK_AUTO_APACHE, 14, 156, 72, 8, 0, WS_EX_LEFT
     AUTOCHECKBOX    " auto start MariaDB", IDC_CHECK_AUTO_MARIA, 14, 171, 75, 8, 0, WS_EX_LEFT
@@ -161,11 +162,11 @@ FONT 9, "Segoe UI"
 {
     DEFPUSHBUTTON   "OK", IDOK, 265, 184, 50, 14, 0, WS_EX_LEFT
     CONTROL         "", IDC_STATIC, WC_STATIC, SS_BLACKFRAME, 7, 30, 310, 147, WS_EX_LEFT
-    ICON            IDI_APACHE, IDC_STATIC, 19, 35, 18, 17, SS_ICON | SS_REALSIZEIMAGE, WS_EX_LEFT
+    ICON            IDI_APACHE, IDC_STATIC, 20, 35, 18, 17, SS_ICON | SS_REALSIZEIMAGE, WS_EX_LEFT
     ICON            IDI_MARIA, IDC_STATIC, 19, 64, 18, 17, SS_ICON | SS_REALSIZEIMAGE, WS_EX_LEFT
     ICON            IDI_PHP, IDC_STATIC, 19, 93, 18, 17, SS_ICON | SS_REALSIZEIMAGE, WS_EX_LEFT
     ICON            IDI_COMPOSER, IDC_STATIC, 19, 122, 18, 17, SS_ICON | SS_REALSIZEIMAGE, WS_EX_LEFT
-    ICON            IDI_PMA, IDC_STATIC, 11, 151, 37, 17, SS_ICON | SS_REALSIZEIMAGE, WS_EX_LEFT
+    ICON            IDI_PMA, IDC_STATIC, 10, 151, 37, 17, SS_ICON | SS_REALSIZEIMAGE, WS_EX_LEFT
     LTEXT           "HomeStack was built as a controller for robust open-source technologies. I would like to acknowledge the following teams for their projects:", IDC_STATIC, 7, 8, 310, 17, SS_LEFT, WS_EX_LEFT
 }
 
@@ -196,6 +197,10 @@ IDI_APPICON_ONOFF  ICON           ".\\assets\\onoff.ico"
 
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 IDI_COMPOSER       ICON           ".\\assets\\composer.ico"
+
+
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+IDI_GITHUB         ICON           ".\\assets\\Github.ico"
 
 
 LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
