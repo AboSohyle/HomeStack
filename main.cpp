@@ -261,23 +261,6 @@ bool UpdateUserPathVar()
   return (status == ERROR_SUCCESS);
 }
 
-VOID GetLastErrorMessage()
-{
-  DWORD error = GetLastError();
-  if (GetLastError())
-  {
-    LPWSTR s = (LPWSTR)L"Unknown error";
-    if (FormatMessage(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-                      NULL, error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPWSTR)&s, 0, NULL))
-    {
-      MessageBox(hWindow, s, L"Error", MB_ICONERROR);
-      LocalFree(s);
-    }
-    else
-      MessageBox(hWindow, s, L"Error", MB_ICONERROR);
-  }
-}
-
 BOOL FileExists(LPCWSTR file)
 {
   DWORD attrib = GetFileAttributes(file);
@@ -447,7 +430,6 @@ BOOL StartDefaultEditor(LPCWSTR file)
     CloseHandle(pi.hThread);
     return TRUE;
   }
-  GetLastErrorMessage();
   return FALSE;
 }
 
@@ -1107,48 +1089,47 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     Animate_OpenEx(hAni, hInst, MAKEINTRESOURCE(IDR_AVI));
     SetWindowPos(hAni, NULL, 0, 0, 606, 1, SWP_HIDEWINDOW | SWP_NOMOVE);
 
-    SendDlgItemMessage(hWindow, IDC_ROOTPATH, WM_SETTEXT, 0, (LPARAM)RootPath);
-    SendDlgItemMessage(hWindow, IDC_EDIT_DOC_ROOT, WM_SETTEXT, 0, (LPARAM)Options.Hdoc.c_str());
+    SendDlgItemMessage(hWnd, IDC_ROOTPATH, WM_SETTEXT, 0, (LPARAM)RootPath);
+    SendDlgItemMessage(hWnd, IDC_EDIT_DOC_ROOT, WM_SETTEXT, 0, (LPARAM)Options.Hdoc.c_str());
     if (Options.HTTPs)
-      SendDlgItemMessage(hWindow, IDC_USEHTTPS, BM_SETCHECK, 1, 0);
+      SendDlgItemMessage(hWnd, IDC_USEHTTPS, BM_SETCHECK, 1, 0);
 
     if (Options.TerminateAllOnQiut)
-      SendDlgItemMessage(hWindow, IDC_CHECK_EXIT_ALL, BM_SETCHECK, 1, 0);
+      SendDlgItemMessage(hWnd, IDC_CHECK_EXIT_ALL, BM_SETCHECK, 1, 0);
 
     if (Options.StartUp == NORMAL)
-      CheckRadioButton(hWindow, IDC_RADIO1, IDC_RADIO3, IDC_RADIO1);
+      CheckRadioButton(hWnd, IDC_RADIO1, IDC_RADIO3, IDC_RADIO1);
     else if (Options.StartUp == MINIMIZED)
-      CheckRadioButton(hWindow, IDC_RADIO1, IDC_RADIO3, IDC_RADIO2);
+      CheckRadioButton(hWnd, IDC_RADIO1, IDC_RADIO3, IDC_RADIO2);
     else
-      CheckRadioButton(hWindow, IDC_RADIO1, IDC_RADIO3, IDC_RADIO3);
+      CheckRadioButton(hWnd, IDC_RADIO1, IDC_RADIO3, IDC_RADIO3);
 
     if (Options.AutoStartApache)
-      SendDlgItemMessage(hWindow, IDC_CHECK_AUTO_APACHE, BM_SETCHECK, 1, 0);
+      SendDlgItemMessage(hWnd, IDC_CHECK_AUTO_APACHE, BM_SETCHECK, 1, 0);
 
     if (Options.AutoStartMaria)
-      SendDlgItemMessage(hWindow, IDC_CHECK_AUTO_MARIA, BM_SETCHECK, 1, 0);
+      SendDlgItemMessage(hWnd, IDC_CHECK_AUTO_MARIA, BM_SETCHECK, 1, 0);
 
     if (Options.ClearAllLogsOnQiut)
-      SendDlgItemMessage(hWindow, IDC_CHECK_CLEAR_LOGS, BM_SETCHECK, 1, 0);
+      SendDlgItemMessage(hWnd, IDC_CHECK_CLEAR_LOGS, BM_SETCHECK, 1, 0);
 
-    SendDlgItemMessage(hWindow, IDC_USERPATH, BM_SETCHECK, 1, 0);
+    SendDlgItemMessage(hWnd, IDC_USERPATH, BM_SETCHECK, 1, 0);
 
     if (ApachePID || MariaPID)
-    {
-      PostMessage(hWindow, WM_NOTIFYSTATE, 0, 0);
-      PostMessage(hWindow, WM_NOTIFYLOGFILES, 0, 0);
-    }
+      PostMessage(hWnd, WM_NOTIFYSTATE, 0, 0);
+
+    PostMessage(hWnd, WM_NOTIFYLOGFILES, 0, 0);
 
     NewJob(LogFileMonitorThread);
 
     NewJob(GetVersionsThread);
 
     if (Options.StartUp == MINIMIZED)
-      ShowWindow(hWindow, SW_SHOWMINIMIZED);
+      ShowWindow(hWnd, SW_SHOWMINIMIZED);
     else if (Options.StartUp == SYSTRAY)
     {
-      ShowWindow(hWindow, SW_SHOWMINIMIZED);
-      SetWindowLongPtr(hWindow, GWL_EXSTYLE, GetWindowLongPtr(hWindow, GWL_EXSTYLE) | WS_EX_TOOLWINDOW);
+      ShowWindow(hWnd, SW_SHOWMINIMIZED);
+      SetWindowLongPtr(hWnd, GWL_EXSTYLE, GetWindowLongPtr(hWnd, GWL_EXSTYLE) | WS_EX_TOOLWINDOW);
       NotifyIcon(TRUE);
     }
 
@@ -1435,7 +1416,7 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
   case WM_NOTIFYSTATE:
   {
-    HWND hAni = GetDlgItem(hWindow, IDD_ANIMATION);
+    HWND hAni = GetDlgItem(hWnd, IDD_ANIMATION);
     BOOL Up = (ApachePID && MariaPID);
 
     SetWindowPos(hAni, NULL, 0, 0, 0, 0, (Up ? SWP_SHOWWINDOW : SWP_HIDEWINDOW) | SWP_NOMOVE | SWP_NOSIZE);
@@ -1445,20 +1426,20 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     else
       Animate_Stop(hAni);
 
-    SetWindowText(GetDlgItem(hWindow, IDC_APACHE_START), ApachePID ? L"Stop" : L"Start");
-    EnableWindow(GetDlgItem(hWindow, IDC_APACHE_RESET), ApachePID);
-    EnableWindow(GetDlgItem(hWindow, IDC_PHP_INFO), ApachePID);
-    InvalidateRect(GetDlgItem(hWindow, IDC_APACHE_STATIC), NULL, FALSE);
+    SetWindowText(GetDlgItem(hWnd, IDC_APACHE_START), ApachePID ? L"Stop" : L"Start");
+    EnableWindow(GetDlgItem(hWnd, IDC_APACHE_RESET), ApachePID);
+    EnableWindow(GetDlgItem(hWnd, IDC_PHP_INFO), ApachePID);
+    InvalidateRect(GetDlgItem(hWnd, IDC_APACHE_STATIC), NULL, FALSE);
 
-    SetWindowText(GetDlgItem(hWindow, IDC_MARIA_START), MariaPID ? L"Stop" : L"Start");
-    EnableWindow(GetDlgItem(hWindow, IDC_MARIA_RESET), MariaPID);
-    InvalidateRect(GetDlgItem(hWindow, IDC_MARIA_STATIC), NULL, FALSE);
+    SetWindowText(GetDlgItem(hWnd, IDC_MARIA_START), MariaPID ? L"Stop" : L"Start");
+    EnableWindow(GetDlgItem(hWnd, IDC_MARIA_RESET), MariaPID);
+    InvalidateRect(GetDlgItem(hWnd, IDC_MARIA_STATIC), NULL, FALSE);
 
-    EnableWindow(GetDlgItem(hWindow, IDC_PHPMYADMIN), Up ? PmaOk : FALSE);
+    EnableWindow(GetDlgItem(hWnd, IDC_PHPMYADMIN), Up ? PmaOk : FALSE);
 
     UINT icn = Up ? IDI_APPICON_ON : ((ApachePID || MariaPID) ? IDI_APPICON_ONOFF : IDI_APPICON_OFF);
     HICON hIcon = (HICON)LoadImage(hInst, MAKEINTRESOURCE(icn), IMAGE_ICON, 48, 48, LR_SHARED);
-    SendDlgItemMessage(hWindow, IDC_LOGO, STM_SETICON, (WPARAM)hIcon, 0);
+    SendDlgItemMessage(hWnd, IDC_LOGO, STM_SETICON, (WPARAM)hIcon, 0);
 
     NotifyIcon(NotifyAdded);
     break;
@@ -1479,11 +1460,13 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
   case WM_CTLCOLORBTN:
   case WM_CTLCOLORSTATIC:
   {
-    HDC hdcStatic = (HDC)wParam;
-    SetBkMode(hdcStatic, TRANSPARENT);
-    SetTextColor(hdcStatic, RGB(229, 229, 229));
     CONST COLORREF red = RGB(218, 59, 47);
     CONST COLORREF green = RGB(104, 218, 61);
+    CONST COLORREF txt = RGB(229, 229, 229);
+
+    HDC hdcStatic = (HDC)wParam;
+    SetBkMode(hdcStatic, TRANSPARENT);
+    SetTextColor(hdcStatic, txt);
     HWND hStatic = (HWND)lParam;
 
     if (hStatic == GetDlgItem(hWnd, IDC_APACHE_STATIC))
