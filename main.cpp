@@ -249,7 +249,7 @@ bool UpdateApacheConfig()
   return true;
 }
 
-bool UpdateUserPathVar()
+bool UpdateUserPathEnvVariable()
 {
   if (!ApacheOk || !PhpOk)
     return false;
@@ -331,17 +331,15 @@ bool UpdateUserPathVar()
 
 BOOL FileExists(LPCWSTR file)
 {
-  DWORD attrib = GetFileAttributes(file);
-  return (attrib != INVALID_FILE_ATTRIBUTES && attrib != FILE_ATTRIBUTE_DIRECTORY);
+  DWORD attrib = GetFileAttributesW(file);
+  return (attrib != INVALID_FILE_ATTRIBUTES && !(attrib & FILE_ATTRIBUTE_DIRECTORY));
 }
 
 VOID NewJob(PTHREAD_START routine)
 {
   HANDLE hand = (HANDLE)_beginthreadex(NULL, 0, routine, NULL, 0, NULL);
   if (hand)
-  {
     CloseHandle(hand);
-  }
 }
 
 VOID InitPathes()
@@ -617,7 +615,6 @@ VOID OptionsGet()
 {
   WCHAR lpCommandline[MAX_PATH];
   StringCchPrintf(lpCommandline, MAX_PATH, L"%s\\config\\self.ini", RootPath);
-
   if (!FileExists(lpCommandline))
     return;
 
@@ -736,7 +733,7 @@ DWORD GetConsoleOutput(LPCWSTR Cmd, LPWSTR Out, int length)
   }
   output[totalRead] = '\0';
 
-  WaitForSingleObject(pi.hProcess, 3000);
+  WaitForSingleObject(pi.hProcess, 2000);
 
   CloseHandle(pi.hProcess);
   CloseHandle(pi.hThread);
@@ -793,7 +790,7 @@ UINT CALLBACK StartApacheThread(LPVOID)
 
   WCHAR Cmd[1024];
 
-  StringCchPrintf(Cmd, 1024, L"%s\\apache\\bin\\httpd.exe -f %s\\config\\apache.conf", RootPath, RootPath);
+  StringCchPrintf(Cmd, 1024, L"\"%s\\apache\\bin\\httpd.exe\" -f \"%s\\config\\apache.conf\"", RootPath, RootPath);
   if (CreateProcess(NULL, Cmd, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
   {
     ApachePID = pi.dwProcessId;
@@ -855,7 +852,7 @@ UINT CALLBACK KillMariaThread(LPVOID)
 
   WCHAR Cmd[1024];
 
-  StringCchPrintf(Cmd, 1024, L"%s\\mysql\\bin\\mariadb-admin.exe shutdown -u root", RootPath);
+  StringCchPrintf(Cmd, 1024, L"\"%s\\mysql\\bin\\mariadb-admin.exe\" shutdown -u root", RootPath);
   if (!CreateProcess(NULL, Cmd, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
     goto end;
 
@@ -1682,7 +1679,7 @@ INT WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
   InitPathes();
 
   InitMariaDataFolder();
-  UpdateUserPathVar();
+  UpdateUserPathEnvVariable();
   UpdateApacheConfig();
   UpdatePhpConfig();
   UpdatePmaConfig();
