@@ -4,8 +4,6 @@
 
 # 🏠 HomeStack
 
----
-
 **HomeStack** is a lightweight, portable management interface for orchestrating local server infrastructure on Windows. It provides a native control plane for the **AMP stack (Apache, MariaDB, PHP)**, pre-integrated with **Composer** and **phpMyAdmin** to deliver a high-performance local development environment.
 
 ## 🌟 Key Features
