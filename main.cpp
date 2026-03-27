@@ -7,9 +7,8 @@ HANDLE hExitApache = NULL;
 HANDLE hExitMaria = NULL;
 DWORD ApachePID = 0;
 DWORD MariaPID = 0;
-HBRUSH hbrDark = NULL;
+HBRUSH hDarkBrush = NULL;
 vector<wstring> SiteList;
-WCHAR VersionStr[5][20];
 OPTIONS Options = {NORMAL, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, L""};
 BOOL ApacheOk, MariaOk, PhpOk, ComposerOk, PmaOk, NotifyAdded = FALSE;
 
@@ -689,68 +688,130 @@ VOID MenuUpdateSiteList(HMENU hPop)
   }
 }
 
-DWORD GetConsoleOutput(LPCWSTR Cmd, LPWSTR Out, int length)
+DWORD GetConsoleOutput(LPCWSTR Cmd, LPCWSTR Flags, LPWSTR Out, int outLength)
 {
   HANDLE hReadPipe = NULL, hWritePipe = NULL;
   SECURITY_ATTRIBUTES sa = {sizeof(sa), NULL, TRUE};
 
   if (!CreatePipe(&hReadPipe, &hWritePipe, &sa, 0))
-    return FALSE;
+    return 0;
 
   SetHandleInformation(hReadPipe, HANDLE_FLAG_INHERIT, 0);
 
   STARTUPINFO si;
   ZeroMemory(&si, sizeof(STARTUPINFO));
   si.cb = sizeof(si);
-  si.hStdError = hWritePipe;
+  si.dwFlags = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES;
+  si.wShowWindow = SW_HIDE;
   si.hStdOutput = hWritePipe;
-  si.dwFlags |= STARTF_USESTDHANDLES;
+  si.hStdError = hWritePipe;
 
   PROCESS_INFORMATION pi;
   ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
 
-  WCHAR lpCommandLine[MAX_PATH];
-  StringCchPrintf(lpCommandLine, MAX_PATH, L"%s\\%s", RootPath, Cmd);
+  WCHAR fullCmd[MAX_PATH * 2];
+  StringCchPrintf(fullCmd, _countof(fullCmd), L"\"%s\\%s\" %s", RootPath, Cmd, Flags);
 
-  if (!CreateProcess(NULL, lpCommandLine, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
+  if (!CreateProcess(NULL, fullCmd, NULL, NULL, TRUE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
   {
     CloseHandle(hReadPipe);
     CloseHandle(hWritePipe);
-    return FALSE;
+    return 0;
   }
 
   CloseHandle(hWritePipe);
 
-  DWORD dwBytesRead = 0;
-  DWORD totalRead = 0;
-  CHAR output[1024];
+  char tempBuf[2048] = {0};
+  DWORD bytesRead = 0, totalRead = 0;
 
-  while (totalRead < (DWORD)length - 1)
+  // Read until the pipe is closed or buffer is full
+  while (ReadFile(hReadPipe, tempBuf + totalRead, sizeof(tempBuf) - totalRead - 1, &bytesRead, NULL) && bytesRead > 0)
   {
-    if (!ReadFile(hReadPipe, output + totalRead, length - 1 - totalRead, &dwBytesRead, NULL) || dwBytesRead == 0)
+    totalRead += bytesRead;
+    if (totalRead >= sizeof(tempBuf) - 1)
       break;
-    totalRead += dwBytesRead;
   }
-  output[totalRead] = '\0';
+  tempBuf[totalRead] = '\0';
 
-  WaitForSingleObject(pi.hProcess, 2000);
-
+  WaitForSingleObject(pi.hProcess, 1000);
   CloseHandle(pi.hProcess);
   CloseHandle(pi.hThread);
   CloseHandle(hReadPipe);
 
-  if (!(totalRead > 0))
+  if (totalRead == 0)
     return 0;
 
-  int sizeNeeded = MultiByteToWideChar(GetConsoleOutputCP(), 0, output, -1, NULL, 0);
+  return MultiByteToWideChar(GetConsoleOutputCP(), 0, tempBuf, -1, Out, outLength);
+}
 
-  if (sizeNeeded == 0 || sizeNeeded > length)
-    return 0;
+UINT CALLBACK GetVersionsThread(LPVOID)
+{
+  WCHAR buf[1024];
 
-  if (MultiByteToWideChar(GetConsoleOutputCP(), 0, output, -1, Out, sizeNeeded) == 0)
-    return 0;
+  struct ServiceInfo
+  {
+    BOOL *flag;
+    const wchar_t *cmd;
+    const wchar_t *flags;
+    const wchar_t *anchor;
+    int anchorOffset;
+    wchar_t endChar;
+    int controlID;
+  };
 
-  return totalRead;
+  ServiceInfo services[] = {
+      {&ApacheOk, L"apache\\bin\\httpd.exe", L"-v", L"Apache/", 7, L' ', IDC_APACHE_V},
+      {&PhpOk, L"php\\php.exe", L"-v", L"PHP ", 4, L' ', IDC_PHP_V},
+      {&MariaOk, L"mysql\\bin\\mariadb.exe", L"-V", L"from ", 5, L'-', IDC_MARIA_V},
+      {&ComposerOk, L"composer\\composer.bat", L"-V", L"version ", 8, L' ', IDC_COMPOSER_V}};
+
+  for (auto &s : services)
+  {
+    if (!*s.flag)
+      continue;
+
+    if (GetConsoleOutput(s.cmd, s.flags, buf, 1024))
+    {
+      wchar_t *ptr = StrStr(buf, s.anchor);
+      if (ptr)
+      {
+        ptr += s.anchorOffset;
+        wchar_t *end = wcschr(ptr, s.endChar);
+        if (end)
+          *end = L'\0';
+
+        SetDlgItemText(hWindow, s.controlID, ptr);
+      }
+    }
+  }
+
+  if (PmaOk)
+  {
+    StringCchPrintf(buf, MAX_PATH, L"%s\\phpMyAdmin\\package.json", RootPath);
+    HANDLE hFile = CreateFile(buf, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, 0, NULL);
+
+    if (hFile != INVALID_HANDLE_VALUE)
+    {
+      char fileBuf[1024] = {0};
+      DWORD read = 0;
+      if (ReadFile(hFile, fileBuf, 1023, &read, NULL))
+      {
+        char *p = StrStrA(fileBuf, "version\": \"");
+        if (p)
+        {
+          p += 11;
+          char *e = StrStrA(p, "\"");
+          if (e)
+            *e = '\0';
+
+          SetDlgItemTextA(hWindow, IDC_PMA_V, p);
+        }
+      }
+      CloseHandle(hFile);
+    }
+  }
+
+  return 0;
 }
 
 UINT CALLBACK LogFileMonitorThread(LPVOID)
@@ -853,48 +914,52 @@ UINT CALLBACK KillMariaThread(LPVOID)
   WCHAR Cmd[1024];
 
   StringCchPrintf(Cmd, 1024, L"\"%s\\mysql\\bin\\mariadb-admin.exe\" shutdown -u root", RootPath);
-  if (!CreateProcess(NULL, Cmd, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
-    goto end;
 
-  WaitForSingleObject(pi.hProcess, 2000);
+  if (CreateProcess(NULL, Cmd, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
+  {
+    if (WaitForSingleObject(pi.hProcess, 3000) == WAIT_TIMEOUT)
+      TerminateProcess(pi.hProcess, 0);
 
-  CloseHandle(pi.hProcess);
-  CloseHandle(pi.hThread);
-  PostMessage(hWindow, WM_NOTIFYSTATE, 0, 0);
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+  }
 
-end:
   return 0;
 }
 
 UINT CALLBACK KillApacheThread(LPVOID)
 {
-  DWORD ret = -1;
+  if (!ApachePID)
+    return -1;
 
-  HANDLE hProcess = OpenProcess(PROCESS_TERMINATE, FALSE, ApachePID);
+  DWORD ret = -1;
+  HANDLE hProcess = OpenProcess(PROCESS_TERMINATE | SYNCHRONIZE, FALSE, ApachePID);
 
   if (hProcess)
   {
-    if (TerminateProcess(hProcess, 0) != 0)
+    if (TerminateProcess(hProcess, 0))
     {
       WaitForSingleObject(hProcess, 3000);
-      WCHAR delfile[MAX_PATH];
-      StringCchPrintf(delfile, MAX_PATH, L"\"%s\\apache\\logs\\httpd.pid\"", RootPath);
-      DeleteFile(delfile);
 
+      WCHAR pidPath[MAX_PATH];
+      StringCchPrintf(pidPath, MAX_PATH, L"%s\\apache\\logs\\httpd.pid", RootPath);
+      DeleteFile(pidPath);
       ret = 0;
     }
     CloseHandle(hProcess);
   }
+
   return ret;
 }
 
 UINT CALLBACK RestartApacheThread(LPVOID)
 {
   DWORD ret = -1;
-  if (0 == KillApacheThread(0))
+
+  if (KillApacheThread(NULL) == 0)
   {
     Sleep(1500);
-    ret = StartApacheThread(0);
+    ret = StartApacheThread(NULL);
   }
   return ret;
 }
@@ -908,103 +973,6 @@ UINT CALLBACK RestartMariaThread(LPVOID)
     ret = StartMariaThread(0);
   }
   return ret;
-}
-
-UINT CALLBACK GetVersionsThread(LPVOID)
-{
-  WCHAR buf[1024] = {};
-  WCHAR *Ptr = 0, *end = 0;
-  HWND hCtrl;
-  DWORD bytesRead = 0;
-
-  ZeroMemory(VersionStr, 5 * 20 * sizeof(wchar_t));
-
-  if (ApacheOk)
-  {
-    GetConsoleOutput(L"apache\\bin\\httpd.exe -v", buf, 1024);
-    if ((Ptr = StrStr(buf, L"Apache/")))
-    {
-      Ptr += 7;
-      end = StrStr(Ptr, L" ");
-      *end = '\0';
-      hCtrl = GetDlgItem(hWindow, IDC_APACHE_V);
-      SetWindowText(hCtrl, Ptr);
-      StringCbCopy(VersionStr[0], 20, Ptr);
-    }
-  }
-
-  if (PhpOk)
-  {
-    GetConsoleOutput(L"php\\php.exe -v", buf, 1024);
-    if ((Ptr = StrStr(buf, L"PHP ")))
-    {
-      Ptr += 4;
-      end = StrStr(Ptr, L" ");
-      *end = '\0';
-      hCtrl = GetDlgItem(hWindow, IDC_PHP_V);
-      SetWindowText(hCtrl, Ptr);
-      StringCbCopy(VersionStr[1], 20, Ptr);
-    }
-  }
-
-  if (MariaOk)
-  {
-    GetConsoleOutput(L"mysql\\bin\\mariadb.exe -V", buf, 1024);
-    if ((Ptr = StrStr(buf, L"from ")))
-    {
-      Ptr += 5;
-      end = StrStr(Ptr, L"-");
-      *end = '\0';
-      hCtrl = GetDlgItem(hWindow, IDC_MARIA_V);
-      SetWindowText(hCtrl, Ptr);
-      StringCbCopy(VersionStr[2], 20, Ptr);
-    }
-  }
-
-  if (ComposerOk)
-  {
-    GetConsoleOutput(L"composer\\composer.bat -V", buf, 1024);
-    if ((Ptr = StrStr(buf, L"version ")))
-    {
-      Ptr += 8;
-      end = StrStr(Ptr, L" ");
-      *end = '\0';
-      hCtrl = GetDlgItem(hWindow, IDC_COMPOSER_V);
-      SetWindowText(hCtrl, Ptr);
-      StringCbCopy(VersionStr[3], 20, Ptr);
-    }
-  }
-
-  if (PmaOk)
-  {
-    StringCchPrintf(buf, MAX_PATH, L"%s\\phpMyAdmin\\package.json", RootPath);
-
-    HANDLE fil = CreateFile(buf, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-
-    if (fil == INVALID_HANDLE_VALUE)
-      return -1;
-
-    CHAR buffer[1024];
-    if (!ReadFile(fil, buffer, 1023, &bytesRead, NULL))
-    {
-      CloseHandle(fil);
-      return -1;
-    }
-    buffer[bytesRead] = '\0';
-    CloseHandle(fil);
-    CHAR *PtrA, *endA;
-    if ((PtrA = StrStrA(buffer, "version\": \"")))
-    {
-      PtrA += 11;
-      endA = StrStrA(PtrA, "\"");
-      *endA = '\0';
-      hCtrl = GetDlgItem(hWindow, IDC_PMA_V);
-      SetWindowTextA(hCtrl, PtrA);
-      GetWindowText(hCtrl, VersionStr[4], 20);
-    }
-  }
-
-  return 0;
 }
 
 INT_PTR CALLBACK AcknowledgeProc(HWND hPage, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -1074,7 +1042,7 @@ INT_PTR CALLBACK AcknowledgeProc(HWND hPage, UINT msg, WPARAM wParam, LPARAM lPa
     HDC hdc = (HDC)wParam;
     SetTextColor(hdc, RGB(255, 255, 255));
     SetBkMode(hdc, TRANSPARENT);
-    return (LRESULT)hbrDark;
+    return (INT_PTR)hDarkBrush;
   }
   }
   return (INT_PTR)FALSE;
@@ -1133,7 +1101,7 @@ INT_PTR CALLBACK AboutProc(HWND hPage, UINT msg, WPARAM wParam, LPARAM lParam)
     HDC hdc = (HDC)wParam;
     SetTextColor(hdc, RGB(255, 255, 255));
     SetBkMode(hdc, TRANSPARENT);
-    return (LRESULT)hbrDark;
+    return (INT_PTR)hDarkBrush;
   }
   }
   return (INT_PTR)FALSE;
@@ -1146,6 +1114,8 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
   case WM_INITDIALOG:
   {
     hWindow = hWnd;
+    hDarkBrush = CreateSolidBrush(RGB(44, 44, 44));
+
     ApplyDarkThemeToApp(hWnd);
 
     HWND hAni = GetDlgItem(hWnd, IDD_ANIMATION);
@@ -1316,7 +1286,8 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
       }
       case IDC_VHOSTS:
       {
-        StartDefaultEditor(L"config\\vhosts.conf");
+        if (ApacheOk)
+          StartDefaultEditor(L"config\\vhosts.conf");
         break;
       }
       case IDC_PHP_INFO:
@@ -1328,8 +1299,7 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
       }
       case IDC_INSTALLCA:
       {
-        MessageBox(hWnd, L"Run create_cert.bat to create new certificate then install it useing this tool.", L"Create CA...", 0);
-        ShellExecute(NULL, L"open", L"certmgr.msc", NULL, NULL, SW_SHOWNORMAL);
+        MessageBox(hWnd, L"Please refere to readme.md for instructions.", L"Create CA...", MB_ICONINFORMATION);
         break;
       }
       case IDC_SET_DOCROOT:
@@ -1337,6 +1307,7 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         BrowseForFolder(hWnd);
         break;
       }
+
       case IDC_THANKS:
       {
         DialogBox(hInst, MAKEINTRESOURCE(IDD_THANKS), hWindow, (DLGPROC)AcknowledgeProc);
@@ -1417,6 +1388,7 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
       case IDC_USERPATH:
       {
         CheckDlgButton(hWnd, IDC_USERPATH, BST_CHECKED);
+        MessageBox(hWnd, L"You can not opt out, HomeStack needs Php and Composer to be in User PATH environoment variable.", L"Homestack", MB_ICONINFORMATION);
         break;
       }
       }
@@ -1466,6 +1438,18 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
           EnableMenuItem(hSubMenu, IDC_MARIA_RESET, MF_BYCOMMAND | (MariaPID ? MF_ENABLED : MF_GRAYED));
           EnableMenuItem(hSubMenu, IDC_PHPMYADMIN, MF_BYCOMMAND | ((ApachePID && MariaPID) ? MF_ENABLED : MF_GRAYED));
           EnableMenuItem(hSubMenu, IDC_PHP_INFO, MF_BYCOMMAND | ((ApachePID && MariaPID) ? MF_ENABLED : MF_GRAYED));
+
+          BOOL e = IsWindowEnabled(GetDlgItem(hWnd, IDC_APACHE_ACCESS));
+          EnableMenuItem(hSubMenu, IDC_APACHE_ACCESS, MF_BYCOMMAND | (e ? MF_ENABLED : MF_GRAYED));
+
+          e = IsWindowEnabled(GetDlgItem(hWnd, IDC_APACHE_ERROR));
+          EnableMenuItem(hSubMenu, IDC_APACHE_ERROR, MF_BYCOMMAND | (e ? MF_ENABLED : MF_GRAYED));
+
+          e = IsWindowEnabled(GetDlgItem(hWnd, IDC_MARIA_ERROR));
+          EnableMenuItem(hSubMenu, IDC_MARIA_ERROR, MF_BYCOMMAND | (e ? MF_ENABLED : MF_GRAYED));
+
+          e = IsWindowEnabled(GetDlgItem(hWnd, IDC_PHP_ERROR));
+          EnableMenuItem(hSubMenu, IDC_PHP_ERROR, MF_BYCOMMAND | (e ? MF_ENABLED : MF_GRAYED));
 
           MenuUpdateSiteList(GetSubMenu(hSubMenu, 7));
 
@@ -1539,68 +1523,48 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
   case WM_CTLCOLORBTN:
   case WM_CTLCOLORSTATIC:
   {
-    CONST COLORREF red = RGB(218, 59, 47);
-    CONST COLORREF green = RGB(104, 218, 61);
-    CONST COLORREF txt = RGB(229, 229, 229);
+    HDC hdc = (HDC)wParam;
+    int controlID = GetDlgCtrlID((HWND)lParam);
 
-    HDC hdcStatic = (HDC)wParam;
-    SetBkMode(hdcStatic, TRANSPARENT);
-    SetTextColor(hdcStatic, txt);
-    HWND hStatic = (HWND)lParam;
+    COLORREF color = RGB(229, 229, 229);
+    SetBkMode(hdc, TRANSPARENT);
 
-    if (hStatic == GetDlgItem(hWnd, IDC_APACHE_STATIC))
+    bool status = false;
+    bool isStatusControl = true;
+
+    switch (controlID)
     {
-      if (ApachePID)
-        SetTextColor(hdcStatic, green);
-      else
-        SetTextColor(hdcStatic, red);
-    }
-    else if (hStatic == GetDlgItem(hWnd, IDC_MARIA_STATIC))
-    {
-      if (MariaPID)
-        SetTextColor(hdcStatic, green);
-      else
-        SetTextColor(hdcStatic, red);
-    }
-    else if (hStatic == GetDlgItem(hWnd, IDC_APACHE_V))
-    {
-      if (ApacheOk)
-        SetTextColor(hdcStatic, green);
-      else
-        SetTextColor(hdcStatic, red);
-    }
-    else if (hStatic == GetDlgItem(hWnd, IDC_MARIA_V))
-    {
-      if (MariaOk)
-        SetTextColor(hdcStatic, green);
-      else
-        SetTextColor(hdcStatic, red);
-    }
-    else if (hStatic == GetDlgItem(hWnd, IDC_PHP_V))
-    {
-      if (PhpOk)
-        SetTextColor(hdcStatic, green);
-      else
-        SetTextColor(hdcStatic, red);
-    }
-    else if (hStatic == GetDlgItem(hWnd, IDC_COMPOSER_V))
-    {
-      if (ComposerOk)
-        SetTextColor(hdcStatic, green);
-      else
-        SetTextColor(hdcStatic, red);
-    }
-    else if (hStatic == GetDlgItem(hWnd, IDC_PMA_V))
-    {
-      if (PmaOk)
-        SetTextColor(hdcStatic, green);
-      else
-        SetTextColor(hdcStatic, red);
+    case IDC_APACHE_STATIC:
+      status = ApachePID;
+      break;
+    case IDC_MARIA_STATIC:
+      status = MariaPID;
+      break;
+    case IDC_APACHE_V:
+      status = ApacheOk;
+      break;
+    case IDC_MARIA_V:
+      status = MariaOk;
+      break;
+    case IDC_PHP_V:
+      status = PhpOk;
+      break;
+    case IDC_COMPOSER_V:
+      status = ComposerOk;
+      break;
+    case IDC_PMA_V:
+      status = PmaOk;
+      break;
+    default:
+      isStatusControl = false;
+      break;
     }
 
-    if (!hbrDark)
-      hbrDark = CreateSolidBrush(RGB(44, 44, 44));
-    return (LRESULT)hbrDark;
+    if (isStatusControl)
+      color = status ? RGB(104, 218, 61) : RGB(218, 59, 47);
+
+    SetTextColor(hdc, color);
+    return (LRESULT)hDarkBrush;
   }
 
   case WM_NOTIFYEXIT:

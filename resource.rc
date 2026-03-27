@@ -30,23 +30,25 @@ IDM_CONTEXTMENU MENU
             MENUITEM "Start", IDC_APACHE_START
             MENUITEM "Restart", IDC_APACHE_RESET, GRAYED
             MENUITEM SEPARATOR
-            MENUITEM "Access log", IDC_APACHE_ACCESS
-            MENUITEM "Error log", IDC_APACHE_ERROR
+            MENUITEM "Edit Virtual Hosts", IDC_VHOSTS
+            MENUITEM SEPARATOR
+            MENUITEM "Access log", IDC_APACHE_ACCESS, GRAYED
+            MENUITEM "Error log", IDC_APACHE_ERROR, GRAYED
         }
         POPUP "Mariadb"
         {
             MENUITEM "Start", IDC_MARIA_START
             MENUITEM "Restart", IDC_MARIA_RESET, GRAYED
             MENUITEM SEPARATOR
-            MENUITEM "Error log", IDC_MARIA_ERROR
-            MENUITEM SEPARATOR
             MENUITEM "PhpMyAdmin", IDC_PHPMYADMIN, GRAYED
+            MENUITEM SEPARATOR
+            MENUITEM "Error log", IDC_MARIA_ERROR, GRAYED
         }
         POPUP "PHP"
         {
-            MENUITEM "Error log", IDC_PHP_ERROR
-            MENUITEM SEPARATOR
             MENUITEM "Php info", IDC_PHP_INFO, GRAYED
+            MENUITEM SEPARATOR
+            MENUITEM "Error log", IDC_PHP_ERROR, GRAYED
         }
         MENUITEM SEPARATOR
         POPUP "Browse"
@@ -72,7 +74,7 @@ CAPTION "About"
 FONT 9, "Segoe UI"
 {
     ICON            IDI_GITHUB, IDC_STATIC, 231, 11, 14, 13, SS_ICON | SS_REALSIZEIMAGE, WS_EX_LEFT
-    DEFPUSHBUTTON   "OK", IDOK, 212, 124, 50, 14, 0, WS_EX_LEFT
+    PUSHBUTTON      "OK", IDOK, 212, 124, 50, 14, 0, WS_EX_LEFT
     CONTROL         "", IDC_STATIC, WC_STATIC, SS_BLACKFRAME, 4, 46, 260, 73, WS_EX_LEFT
     LTEXT           "HomeStack  is  distributed  under the terms of the MIT license. See  LICENSE.md  for  details.", IDC_STATIC, 8, 96, 254, 17, SS_LEFT, WS_EX_LEFT
     LTEXT           "(C) 2026 AboSoyle", IDC_STATIC, 44, 28, 57, 9, SS_LEFT, WS_EX_LEFT
@@ -91,7 +93,7 @@ CAPTION "Home Stack v1.0"
 CLASS "AMPCTRLClass"
 FONT 9, "Segoe UI"
 {
-    EDITTEXT        IDC_EDIT_DOC_ROOT, 72, 138, 175, 12, NOT WS_BORDER | NOT WS_TABSTOP | ES_AUTOHSCROLL | ES_READONLY, WS_EX_LEFT
+    EDITTEXT        IDC_EDIT_DOC_ROOT, 72, 138, 175, 8, NOT WS_BORDER | NOT WS_TABSTOP | ES_AUTOHSCROLL | ES_READONLY, WS_EX_LEFT
     CONTROL         "", IDC_STATIC, WC_STATIC, SS_BLACKFRAME, 70, 136, 179, 12, WS_EX_LEFT
     CONTROL         "", IDD_ANIMATION, ANIMATE_CLASS, ACS_CENTER, 0, 0, 346, 6, WS_EX_LEFT
     AUTOCHECKBOX    "add Php and Composer to user PATH", IDC_USERPATH, 146, 156, 125, 8, 0, WS_EX_LEFT
@@ -109,7 +111,7 @@ FONT 9, "Segoe UI"
     AUTORADIOBUTTON "normal", IDC_RADIO1, 70, 100, 47, 13, BS_PUSHLIKE, WS_EX_LEFT
     AUTORADIOBUTTON "minimized", IDC_RADIO2, 122, 100, 47, 13, BS_PUSHLIKE, WS_EX_LEFT
     AUTORADIOBUTTON "system tray", IDC_RADIO3, 175, 100, 47, 13, BS_PUSHLIKE, WS_EX_LEFT
-    EDITTEXT        IDC_ROOTPATH, 71, 120, 197, 12, NOT WS_BORDER | ES_AUTOHSCROLL | ES_READONLY, WS_EX_LEFT
+    EDITTEXT        IDC_ROOTPATH, 71, 120, 197, 8, NOT WS_BORDER | ES_AUTOHSCROLL | ES_READONLY, WS_EX_LEFT
     CONTROL         "", IDC_STATIC, WC_STATIC, SS_BLACKFRAME, 70, 118, 199, 12, WS_EX_LEFT
     AUTOCHECKBOX    " auto start Apache", IDC_CHECK_AUTO_APACHE, 14, 156, 72, 8, 0, WS_EX_LEFT
     AUTOCHECKBOX    " auto start MariaDB", IDC_CHECK_AUTO_MARIA, 14, 171, 75, 8, 0, WS_EX_LEFT
@@ -160,7 +162,7 @@ EXSTYLE WS_EX_TOOLWINDOW
 CAPTION "Acknowlagements"
 FONT 9, "Segoe UI"
 {
-    DEFPUSHBUTTON   "OK", IDOK, 265, 184, 50, 14, 0, WS_EX_LEFT
+    PUSHBUTTON      "OK", IDOK, 265, 184, 50, 14, 0, WS_EX_LEFT
     CONTROL         "", IDC_STATIC, WC_STATIC, SS_BLACKFRAME, 7, 30, 310, 147, WS_EX_LEFT
     ICON            IDI_APACHE, IDC_STATIC, 20, 35, 18, 17, SS_ICON | SS_REALSIZEIMAGE, WS_EX_LEFT
     ICON            IDI_MARIA, IDC_STATIC, 19, 64, 18, 17, SS_ICON | SS_REALSIZEIMAGE, WS_EX_LEFT
@@ -233,13 +235,13 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
     {
         BLOCK "080904B0"
         {
-            VALUE "CompanyName", "AMP Control"
+            VALUE "CompanyName", "HomeStack"
             VALUE "FileDescription", "Apache, Mariadb and Php Controller"
             VALUE "FileVersion", "1.0.0.0"
-            VALUE "InternalName", "AMP Home Server"
-            VALUE "LegalCopyright", "2025 Wael Mohammed Ali"
-            VALUE "OriginalFilename", "AMPControl.exe"
-            VALUE "ProductName", "AMP Home Server"
+            VALUE "InternalName", "HomeStack"
+            VALUE "LegalCopyright", "2026 Wael Mohammed Ali"
+            VALUE "OriginalFilename", "HomeStack.exe"
+            VALUE "ProductName", "HomeStack"
             VALUE "ProductVersion", "1.0.0.0"
         }
     }
