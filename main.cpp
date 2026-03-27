@@ -89,6 +89,74 @@ VOID BrowseForFolder(HWND hWnd)
   }
 }
 
+bool InitMariaDataFolder()
+{
+  if (!MariaOk)
+    return false;
+
+  STARTUPINFO si;
+  PROCESS_INFORMATION pi;
+  const wstring mysqlBase = wstring(RootPath) + L"\\mysql\\data";
+
+  // 1. Define required directories
+  vector<wstring> requiredDirs = {
+      mysqlBase,
+      mysqlBase + L"\\performance_schema",
+      mysqlBase + L"\\mysql"};
+
+  bool needsInit = false;
+  for (const auto &path : requiredDirs)
+  {
+    DWORD attr = GetFileAttributes(path.c_str());
+    if (attr == INVALID_FILE_ATTRIBUTES || !(attr & FILE_ATTRIBUTE_DIRECTORY))
+    {
+      needsInit = true;
+      break;
+    }
+  }
+
+  if (needsInit)
+  {
+    ZeroMemory(&si, sizeof(STARTUPINFO));
+    si.cb = sizeof(si);
+    si.dwFlags = STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_SHOWNORMAL;
+
+    ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
+
+    // 2. Build command string
+    wstring cmdLine = L"cmd.exe /c echo Initializing MariaDB data folder, please wait... && "
+                      L"\"" +
+                      wstring(RootPath) + L"\\mysql\\bin\\mariadb-install-db.exe\" --datadir=" +
+                      L"\"" + wstring(RootPath) + L"\\mysql\\data\"";
+
+    vector<wchar_t> cmdBuffer(cmdLine.begin(), cmdLine.end());
+    cmdBuffer.push_back(0);
+
+    if (!CreateProcess(NULL, cmdBuffer.data(), NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
+    {
+      MessageBox(hWindow, L"Failed to launch MariaDB initialization!", L"Error", MB_ICONERROR);
+      return false;
+    }
+
+    WaitForSingleObject(pi.hProcess, INFINITE);
+
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+  }
+
+  return true;
+}
+
+bool UpdatePmaConfig()
+{
+  if (!PmaOk)
+    return false;
+  const wstring filename = wstring(RootPath) + L"\\config\\config.inc.php";
+  const wstring filename2 = wstring(RootPath) + L"\\phpMyAdmin\\config.inc.php";
+  return (bool)CopyFile(filename.c_str(), filename2.c_str(), FALSE);
+}
+
 bool UpdatePhpConfig()
 {
   const string filename = ".\\config\\php.ini";
@@ -813,7 +881,7 @@ UINT CALLBACK KillApacheThread(LPVOID)
     {
       WaitForSingleObject(hProcess, 3000);
       WCHAR delfile[MAX_PATH];
-      StringCchPrintf(delfile, MAX_PATH, L"%s\\apache\\logs\\httpd.pid", RootPath);
+      StringCchPrintf(delfile, MAX_PATH, L"\"%s\\apache\\logs\\httpd.pid\"", RootPath);
       DeleteFile(delfile);
 
       ret = 0;
@@ -1593,7 +1661,7 @@ INT WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
   wc.cbSize = sizeof(wc);
   if (!GetClassInfoEx(NULL, MAKEINTRESOURCE(32770), &wc))
   {
-    MessageBox(NULL, L"Error getting class info.", L"Error", MB_ICONERROR | MB_OK);
+    MessageBox(NULL, L"Error getting class info.", L"Error", MB_ICONERROR);
     return 0;
   }
 
@@ -1604,7 +1672,7 @@ INT WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
 
   if (!RegisterClassEx(&wc))
   {
-    MessageBox(NULL, L"Error registering window class.", L"Error", MB_ICONERROR | MB_OK);
+    MessageBox(NULL, L"Error registering window class.", L"Error", MB_ICONERROR);
     return 0;
   }
 
@@ -1613,9 +1681,11 @@ INT WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
 
   InitPathes();
 
+  InitMariaDataFolder();
+  UpdateUserPathVar();
   UpdateApacheConfig();
   UpdatePhpConfig();
-  UpdateUserPathVar();
+  UpdatePmaConfig();
 
   OptionsGet();
 
