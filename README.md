@@ -2,6 +2,10 @@
   <img src="images/screenshot.png" alt="HomeStack Interface" width="640">
 </p>
 
+![Contributions](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)
+[![GitHub license](https://img.shields.io/github/license/thedevs-network/kutt.svg)](https://github.com/AboSohyle/HomeStack/blob/main/LICENSE)
+
+
 # 🏠 HomeStack
 
 **HomeStack** is a lightweight, portable management interface for orchestrating local server infrastructure on Windows. It provides a native control plane for the **AMP stack (Apache, MariaDB, PHP)**, pre-integrated with **Composer** and **phpMyAdmin** to deliver a high-performance local development environment.

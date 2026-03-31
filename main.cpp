@@ -1595,7 +1595,7 @@ INT WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
 {
   CONST WCHAR *ClassName = L"AMPCTRLClass";
   // Only one instance are allowed...
-  HANDLE hMutex = CreateMutex(NULL, FALSE, L"Global\\HomeStack_version_1_0");
+  HANDLE hMutex = CreateMutexW(NULL, TRUE, L"Global\\HomeStack_version_1_0");
   if (GetLastError() == ERROR_ALREADY_EXISTS)
   {
     HWND hWnd = FindWindow(ClassName, NULL);
@@ -1607,13 +1607,9 @@ INT WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
       NotifyIcon(FALSE);
       SetForegroundWindow(hWnd);
     }
-    else
-    {
-      MessageBox(NULL, L"Application is already running.", L"Error", MB_ICONERROR);
-    }
     if (hMutex)
       CloseHandle(hMutex);
-    return -1;
+    return 0;
   }
 
   // For simplicty we use dialog based app so,
@@ -1628,7 +1624,7 @@ INT WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
   if (!GetClassInfoEx(NULL, MAKEINTRESOURCE(32770), &wc))
   {
     MessageBox(NULL, L"Error getting class info.", L"Error", MB_ICONERROR);
-    return -2;
+    return -1;
   }
 
   wc.hInstance = hInst = hInstance;
@@ -1645,13 +1641,14 @@ INT WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
   // start up...
   CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 
+  // Read user options...
   InitPaths();
+  OptionsGet();
 
   // Maria init...
   InitMariaDataFolder();
 
   // Apache init...
-  OptionsGet();
   if (!Options.Hdoc.empty())
   {
     DWORD attrib = GetFileAttributes(Options.Hdoc.c_str());
@@ -1679,7 +1676,7 @@ INT WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
     }
   }
 
-  //  Php init...
+  // Php init...
   UpdatePhpConfig();
 
   // PhpMyAdmin init...
@@ -1691,14 +1688,14 @@ INT WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
   // Update Apache and maria process Id if any...
   FindOnlineServices();
 
+  // Initialize sites' list
+  LoadSiteList();
+
   // Aplay user options...
   if (ApacheOk && PhpOk && Options.AutoStartApache && !ApachePID)
     NewJob(StartApacheThread);
   if (MariaOk && Options.AutoStartMaria && !MariaPID)
     NewJob(StartMariaThread);
-
-  // Initialize sites' list
-  LoadSiteList();
 
   // We are ready to go...
   DialogBox(hInst, MAKEINTRESOURCE(IDD_APP_DIALOG), NULL, (DLGPROC)MainDlgProc);
