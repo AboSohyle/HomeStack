@@ -9,7 +9,7 @@ DWORD ApachePID = 0;
 DWORD MariaPID = 0;
 HBRUSH hDarkBrush = NULL;
 vector<wstring> SiteList;
-OPTIONS Options = {NORMAL, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, L""};
+OPTIONS Options = {NORMAL, FALSE, FALSE, TRUE, FALSE, TRUE, L""};
 BOOL ApacheOk, MariaOk, PhpOk, ComposerOk, PmaOk, NotifyAdded = FALSE;
 
 BOOL CALLBACK ApplyThemeToChild(HWND hChild, LPARAM lParam)
@@ -42,8 +42,9 @@ VOID ApplyDarkThemeToApp(HWND hWnd)
   EnumChildWindows(hWnd, ApplyThemeToChild, (LPARAM)TRUE);
 }
 
-VOID BrowseForFolder(HWND hWnd)
+BOOL BrowseForFolder(HWND hWnd)
 {
+  BOOL ret = FALSE;
   IFileOpenDialog *pFileOpen = nullptr;
   HRESULT hr = CoCreateInstance(CLSID_FileOpenDialog, NULL, CLSCTX_ALL, IID_PPV_ARGS(&pFileOpen));
   if (SUCCEEDED(hr))
@@ -80,12 +81,14 @@ VOID BrowseForFolder(HWND hWnd)
           Options.Hdoc = pszFilePath;
           SendDlgItemMessage(hWnd, IDC_EDIT_DOC_ROOT, WM_SETTEXT, 0, (LPARAM)Options.Hdoc.c_str());
           CoTaskMemFree(pszFilePath);
+          ret = TRUE;
         }
         pItem->Release();
       }
     }
     pFileOpen->Release();
   }
+  return ret;
 }
 
 bool InitMariaDataFolder()
@@ -217,10 +220,14 @@ bool UpdateApacheConfig()
 {
   const string filename = ".\\config\\apache.conf";
 
-  filesystem::path path_obj(RootPath);
-  string root = path_obj.string();
+  filesystem::path path_obj1(RootPath);
+  string root = path_obj1.string();
+
+  filesystem::path path_obj2(Options.Hdoc);
+  string docroot = path_obj2.string();
 
   replace(root.begin(), root.end(), '\\', '/');
+  replace(docroot.begin(), docroot.end(), '\\', '/');
 
   ifstream inFile(filename);
   if (!inFile.is_open())
@@ -233,6 +240,8 @@ bool UpdateApacheConfig()
   {
     if (line.find("Define MYROOT") == 0)
       line = "Define MYROOT \"" + root + "\"";
+    else if (line.find("Define DOCROOT") == 0)
+      line = "Define DOCROOT \"" + docroot + "\"";
 
     lines.push_back(line);
   }
@@ -341,7 +350,7 @@ VOID NewJob(PTHREAD_START routine)
     CloseHandle(hand);
 }
 
-VOID InitPathes()
+VOID InitPaths()
 {
   GetModuleFileName(NULL, RootPath, MAX_PATH);
   PathCchRemoveFileSpec(RootPath, MAX_PATH);
@@ -492,10 +501,6 @@ BOOL StartDefaultEditor(LPCWSTR file)
 
 BOOL LoadSiteList()
 {
-  DWORD attrib = GetFileAttributes(Options.Hdoc.c_str());
-  if (attrib == INVALID_FILE_ATTRIBUTES || attrib != FILE_ATTRIBUTE_DIRECTORY)
-    return FALSE;
-
   SiteList.clear();
 
   WIN32_FIND_DATA ffd;
@@ -1057,10 +1062,10 @@ INT_PTR CALLBACK AboutProc(HWND hPage, UINT msg, WPARAM wParam, LPARAM lParam)
     ApplyDarkThemeToApp(hPage);
     HWND h1 = CreateWindow(WC_LINK,
                            L"<A HREF=\"https://github.com/AboSohyle/HomeStack/\">repository</A>",
-                           WS_VISIBLE | WS_CHILD, 388, 45, 60, 16, hPage, (HMENU)1204, hInst, NULL);
+                           WS_VISIBLE | WS_CHILD, 388, 50, 60, 17, hPage, (HMENU)1204, hInst, NULL);
     HWND h2 = CreateWindow(WC_LINK,
                            L"Built with <A HREF=\"https://winlibs.com/\">winlibs</A>.",
-                           WS_VISIBLE | WS_CHILD, 14, 238, 278, 16, hPage, (HMENU)1204, hInst, NULL);
+                           WS_VISIBLE | WS_CHILD, 14, 238, 278, 17, hPage, (HMENU)1204, hInst, NULL);
 
     HFONT fn = (HFONT)SendMessage(hPage, WM_GETFONT, 0, 0);
     SendMessage(h1, WM_SETFONT, (WPARAM)fn, 1);
@@ -1114,8 +1119,7 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
   case WM_INITDIALOG:
   {
     hWindow = hWnd;
-    hDarkBrush = CreateSolidBrush(RGB(44, 44, 44));
-
+    hDarkBrush = CreateSolidBrush(RGB(45, 45, 45));
     ApplyDarkThemeToApp(hWnd);
 
     HWND hAni = GetDlgItem(hWnd, IDD_ANIMATION);
@@ -1590,7 +1594,7 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 INT WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
 {
   CONST WCHAR *ClassName = L"AMPCTRLClass";
-
+  // Only one instance are allowed...
   HANDLE hMutex = CreateMutex(NULL, FALSE, L"Global\\HomeStack_version_1_0");
   if (GetLastError() == ERROR_ALREADY_EXISTS)
   {
@@ -1612,18 +1616,19 @@ INT WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
     return -1;
   }
 
+  // For simplicty we use dialog based app so,
+  // it's easy to edit interface with any resource editor...
   INITCOMMONCONTROLSEX icc;
-  WNDCLASSEX wc;
-
   icc.dwSize = sizeof(icc);
   icc.dwICC = ICC_WIN95_CLASSES;
   InitCommonControlsEx(&icc);
 
+  WNDCLASSEX wc;
   wc.cbSize = sizeof(wc);
   if (!GetClassInfoEx(NULL, MAKEINTRESOURCE(32770), &wc))
   {
     MessageBox(NULL, L"Error getting class info.", L"Error", MB_ICONERROR);
-    return 0;
+    return -2;
   }
 
   wc.hInstance = hInst = hInstance;
@@ -1634,37 +1639,71 @@ INT WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
   if (!RegisterClassEx(&wc))
   {
     MessageBox(NULL, L"Error registering window class.", L"Error", MB_ICONERROR);
-    return 0;
+    return -3;
   }
 
   // start up...
   CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
 
-  InitPathes();
+  InitPaths();
 
+  // Maria init...
   InitMariaDataFolder();
-  UpdateUserPathEnvVariable();
-  UpdateApacheConfig();
+
+  // Apache init...
+  OptionsGet();
+  if (!Options.Hdoc.empty())
+  {
+    DWORD attrib = GetFileAttributes(Options.Hdoc.c_str());
+    if (attrib != INVALID_FILE_ATTRIBUTES && (attrib & FILE_ATTRIBUTE_DIRECTORY))
+    {
+      UpdateApacheConfig();
+    }
+    else
+    {
+      MessageBox(NULL, L"It seems that Root document points to an invalid path!", L"Error", MB_ICONINFORMATION);
+      goto reset;
+    }
+  }
+  else
+  {
+  reset:
+    if (BrowseForFolder(GetDesktopWindow()))
+    {
+      UpdateApacheConfig();
+    }
+    else
+    {
+      MessageBox(NULL, L"Root document must be set.", L"Error", MB_ICONERROR);
+      goto end;
+    }
+  }
+
+  //  Php init...
   UpdatePhpConfig();
+
+  // PhpMyAdmin init...
   UpdatePmaConfig();
 
-  OptionsGet();
+  // Set PHP and Composer in User path environment variable...
+  UpdateUserPathEnvVariable();
 
-  if (Options.Hdoc.empty())
-    BrowseForFolder(GetDesktopWindow());
-
+  // Update Apache and maria process Id if any...
   FindOnlineServices();
 
+  // Aplay user options...
   if (ApacheOk && PhpOk && Options.AutoStartApache && !ApachePID)
     NewJob(StartApacheThread);
-
   if (MariaOk && Options.AutoStartMaria && !MariaPID)
     NewJob(StartMariaThread);
 
+  // Initialize sites' list
   LoadSiteList();
 
+  // We are ready to go...
   DialogBox(hInst, MAKEINTRESOURCE(IDD_APP_DIALOG), NULL, (DLGPROC)MainDlgProc);
 
+end:
   CoUninitialize();
 
   if (hMutex)
