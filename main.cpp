@@ -20,7 +20,7 @@ BOOL CALLBACK ApplyThemeToChild(HWND hChild, LPARAM lParam)
   return TRUE;
 }
 
-VOID ApplyDarkThemeToApp(HWND hWnd)
+VOID ApplyDarkTheme(HWND hWnd)
 {
   BOOL value = TRUE;
   typedef int(WINAPI * fnSetPreferredAppMode)(int);
@@ -614,12 +614,6 @@ VOID FindOnlineServices()
     } while ((!apacheFound || !mariaFound) && Process32Next(hSnapshot, &pe32));
   }
   CloseHandle(hSnapshot);
-
-  if (ApachePID || MariaPID)
-  {
-    PostMessage(hWindow, WM_NOTIFYSTATE, 0, 0);
-    PostMessage(hWindow, WM_NOTIFYLOGFILES, 0, 0);
-  }
 }
 
 VOID OptionsGet()
@@ -852,6 +846,9 @@ UINT CALLBACK LogFileMonitorThread(LPVOID)
 
 UINT CALLBACK StartApacheThread(LPVOID)
 {
+  if (!ApacheOk || !PhpOk || ApachePID)
+    return 1;
+
   STARTUPINFO si;
   PROCESS_INFORMATION pi;
   ZeroMemory(&si, sizeof(si));
@@ -879,6 +876,9 @@ UINT CALLBACK StartApacheThread(LPVOID)
 
 UINT CALLBACK StartMariaThread(LPVOID)
 {
+  if (!MariaOk || MariaPID)
+    return 1;
+
   STARTUPINFO si;
   PROCESS_INFORMATION pi;
   ZeroMemory(&si, sizeof(si));
@@ -993,7 +993,7 @@ INT_PTR CALLBACK AcknowledgeProc(HWND hPage, UINT msg, WPARAM wParam, LPARAM lPa
   {
   case WM_INITDIALOG:
   {
-    ApplyDarkThemeToApp(hPage);
+    ApplyDarkTheme(hPage);
     HFONT fn = (HFONT)SendMessage(hPage, WM_GETFONT, 0, 0);
     HWND h1, h2, h3, h4, h5;
     h1 = CreateWindow(WC_LINK,
@@ -1066,7 +1066,7 @@ INT_PTR CALLBACK AboutProc(HWND hPage, UINT msg, WPARAM wParam, LPARAM lParam)
   {
   case WM_INITDIALOG:
   {
-    ApplyDarkThemeToApp(hPage);
+    ApplyDarkTheme(hPage);
     HWND h1 = CreateWindow(WC_LINK,
                            L"<A HREF=\"https://github.com/AboSohyle/HomeStack/\">repository</A>",
                            WS_VISIBLE | WS_CHILD, 388, 50, 60, 17, hPage, (HMENU)1204, hInst, NULL);
@@ -1154,6 +1154,9 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
       SendDlgItemMessage(hWnd, IDC_CHECK_CLEAR_LOGS, BM_SETCHECK, 1, 0);
 
     SendDlgItemMessage(hWnd, IDC_USERPATH, BM_SETCHECK, 1, 0);
+
+    SendMessage(hWnd, WM_NOTIFYSTATE, 0, 0);
+    SendMessage(hWnd, WM_NOTIFYLOGFILES, 0, 0);
 
     NewJob(LogFileMonitorThread);
 
@@ -1393,7 +1396,8 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
       BOOL exists = FileExists(fullPath.c_str());
       EnableWindow(GetDlgItem(hWnd, controlIDs[i]), exists);
     }
-    break;
+
+    return (INT_PTR)TRUE;
   }
 
   case WM_NOTIFYICON:
@@ -1482,7 +1486,24 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     SendDlgItemMessage(hWnd, IDC_LOGO, STM_SETICON, (WPARAM)hIcon, 0);
 
     NotifyIcon(NotifyAdded);
-    break;
+    return (INT_PTR)TRUE;
+  }
+
+  case WM_NOTIFYEXIT:
+  {
+    PIDID id = (PIDID)lParam;
+    if (id == APACHE)
+    {
+      UnregisterWait(hExitApache);
+      ApachePID = 0;
+    }
+    else if (id == MARIA)
+    {
+      UnregisterWait(hExitMaria);
+      MariaPID = 0;
+    }
+    PostMessage(hWindow, WM_NOTIFYSTATE, 0, 0);
+    return (INT_PTR)TRUE;
   }
 
   case WM_SYSCOMMAND:
@@ -1553,23 +1574,6 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     PostQuitMessage(0);
     return (INT_PTR)TRUE;
   }
-
-  case WM_NOTIFYEXIT:
-  {
-    PostMessage(hWindow, WM_NOTIFYSTATE, 0, 0);
-    PIDID id = (PIDID)lParam;
-    if (id == APACHE)
-    {
-      UnregisterWait(hExitApache);
-      ApachePID = 0;
-    }
-    else if (id == MARIA)
-    {
-      UnregisterWait(hExitMaria);
-      MariaPID = 0;
-    }
-    return (INT_PTR)TRUE;
-  }
   }
   return (INT_PTR)FALSE;
 }
@@ -1577,7 +1581,7 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 INT WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
 {
   CONST WCHAR *ClassName = L"AMPCTRLClass";
-  // Only one instance are allowed...
+
   HANDLE hMutex = CreateMutexW(NULL, TRUE, L"Global\\HomeStack_version_1_0");
   if (GetLastError() == ERROR_ALREADY_EXISTS)
   {
@@ -1595,8 +1599,6 @@ INT WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
     return 0;
   }
 
-  // For simplicty we use dialog based app so,
-  // it's easy to edit interface with any resource editor...
   INITCOMMONCONTROLSEX icc;
   icc.dwSize = sizeof(icc);
   icc.dwICC = ICC_WIN95_CLASSES;
@@ -1636,9 +1638,7 @@ INT WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
   {
     DWORD attrib = GetFileAttributes(Options.Hdoc.c_str());
     if (attrib != INVALID_FILE_ATTRIBUTES && (attrib & FILE_ATTRIBUTE_DIRECTORY))
-    {
       UpdateApacheConfig();
-    }
     else
     {
       MessageBox(NULL, L"It seems that Root document points to an invalid path!", L"Error", MB_ICONINFORMATION);
@@ -1649,9 +1649,7 @@ INT WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
   {
   reset:
     if (BrowseForFolder(GetDesktopWindow()))
-    {
       UpdateApacheConfig();
-    }
     else
     {
       MessageBox(NULL, L"Root document must be set.", L"Error", MB_ICONERROR);
@@ -1671,19 +1669,20 @@ INT WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
   // Initialize sites' list
   LoadSiteList();
 
+  // Update Apache and maria process PIDs if any...
+  FindOnlineServices();
+
   hDarkBrush = CreateSolidBrush(RGB(45, 45, 45));
 
   hWindow = CreateDialog(hInstance, MAKEINTRESOURCE(IDD_APP_DIALOG), NULL, MainDlgProc);
 
-  ApplyDarkThemeToApp(hWindow);
-
-  // Update Apache and maria process Id if any...
-  FindOnlineServices();
+  ApplyDarkTheme(hWindow);
 
   // Aplay user options...
-  if (ApacheOk && PhpOk && Options.AutoStartApache && !ApachePID)
+  if (Options.AutoStartApache)
     NewJob(StartApacheThread);
-  if (MariaOk && Options.AutoStartMaria && !MariaPID)
+
+  if (Options.AutoStartMaria)
     NewJob(StartMariaThread);
 
   if (Options.StartUp == MINIMIZED)
@@ -1710,10 +1709,8 @@ INT WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
 
   if (Options.TerminateAllOnQiut)
   {
-    if (ApachePID)
-      KillApacheThread(0);
-    if (MariaPID)
-      KillMariaThread(0);
+    KillApacheThread(0);
+    KillMariaThread(0);
   }
 
   if (Options.ClearAllLogsOnQiut)
