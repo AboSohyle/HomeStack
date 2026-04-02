@@ -127,10 +127,11 @@ bool InitMariaDataFolder()
     ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
 
     // 2. Build command string
-    wstring cmdLine = L"cmd.exe /c echo Initializing MariaDB data folder, please wait... && "
-                      L"\"" +
-                      wstring(RootPath) + L"\\mysql\\bin\\mariadb-install-db.exe\" --datadir=" +
-                      L"\"" + wstring(RootPath) + L"\\mysql\\data\"";
+    const wstring mariadb = L"\"" + wstring(RootPath) + L"\\mysql\\bin\\mariadb-install-db.exe\"";
+    const wstring datadir = L"\"" + wstring(RootPath) + L"\\mysql\\data\"";
+    const wstring config = L"\"" + wstring(RootPath) + L"\\config\\mysql.ini\"";
+    wstring cmdLine = L"cmd /c echo Initializing MariaDB data folder, please wait... && " +
+                      mariadb + L" --datadir=" + datadir + L" --config=" + config;
 
     vector<wchar_t> cmdBuffer(cmdLine.begin(), cmdLine.end());
     cmdBuffer.push_back(0);
@@ -613,6 +614,12 @@ VOID FindOnlineServices()
     } while ((!apacheFound || !mariaFound) && Process32Next(hSnapshot, &pe32));
   }
   CloseHandle(hSnapshot);
+
+  if (ApachePID || MariaPID)
+  {
+    PostMessage(hWindow, WM_NOTIFYSTATE, 0, 0);
+    PostMessage(hWindow, WM_NOTIFYLOGFILES, 0, 0);
+  }
 }
 
 VOID OptionsGet()
@@ -1118,10 +1125,6 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
   {
   case WM_INITDIALOG:
   {
-    hWindow = hWnd;
-    hDarkBrush = CreateSolidBrush(RGB(45, 45, 45));
-    ApplyDarkThemeToApp(hWnd);
-
     HWND hAni = GetDlgItem(hWnd, IDD_ANIMATION);
     Animate_OpenEx(hAni, hInst, MAKEINTRESOURCE(IDR_AVI));
     SetWindowPos(hAni, NULL, 0, 0, 606, 1, SWP_HIDEWINDOW | SWP_NOMOVE);
@@ -1152,23 +1155,9 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
     SendDlgItemMessage(hWnd, IDC_USERPATH, BM_SETCHECK, 1, 0);
 
-    if (ApachePID || MariaPID)
-      PostMessage(hWnd, WM_NOTIFYSTATE, 0, 0);
-
-    PostMessage(hWnd, WM_NOTIFYLOGFILES, 0, 0);
-
     NewJob(LogFileMonitorThread);
 
     NewJob(GetVersionsThread);
-
-    if (Options.StartUp == MINIMIZED)
-      ShowWindow(hWnd, SW_SHOWMINIMIZED);
-    else if (Options.StartUp == SYSTRAY)
-    {
-      ShowWindow(hWnd, SW_SHOWMINIMIZED);
-      SetWindowLongPtr(hWnd, GWL_EXSTYLE, GetWindowLongPtr(hWnd, GWL_EXSTYLE) | WS_EX_TOOLWINDOW);
-      NotifyIcon(TRUE);
-    }
 
     return (INT_PTR)TRUE;
   }
@@ -1324,23 +1313,7 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
       }
       case IDC_QUIT:
       {
-        if (Options.TerminateAllOnQiut)
-        {
-          if (ApachePID)
-            NewJob(KillApacheThread);
-          if (MariaPID)
-            NewJob(KillMariaThread);
-        }
-
-        Animate_Close(GetDlgItem(hWnd, IDD_ANIMATION));
-        if (!IsWindowEnabled(GetDlgItem(hWnd, IDC_CHECK_CLEAR_LOGS)) && Options.ClearAllLogsOnQiut)
-          Options.ClearAllLogsOnQiut = 0;
-
-        if (Options.ClearAllLogsOnQiut)
-          ClearLogsAndTmpFiles();
-
-        OptionsSet();
-        EndDialog(hWnd, 0);
+        DestroyWindow(hWnd);
         break;
       }
 
@@ -1571,6 +1544,16 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     return (LRESULT)hDarkBrush;
   }
 
+  case WM_DESTROY:
+  {
+    Animate_Close(GetDlgItem(hWnd, IDD_ANIMATION));
+    if (!IsWindowEnabled(GetDlgItem(hWnd, IDC_CHECK_CLEAR_LOGS)) && Options.ClearAllLogsOnQiut)
+      Options.ClearAllLogsOnQiut = 0;
+
+    PostQuitMessage(0);
+    return (INT_PTR)TRUE;
+  }
+
   case WM_NOTIFYEXIT:
   {
     PostMessage(hWindow, WM_NOTIFYSTATE, 0, 0);
@@ -1602,10 +1585,10 @@ INT WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
     if (hWnd)
     {
       hWindow = hWnd;
-      SetWindowLongPtr(hWnd, GWL_EXSTYLE, GetWindowLongPtr(hWnd, GWL_EXSTYLE) & ~WS_EX_TOOLWINDOW);
-      SendMessage(hWnd, WM_SYSCOMMAND, SC_RESTORE, 0);
+      SetWindowLongPtr(hWindow, GWL_EXSTYLE, GetWindowLongPtr(hWindow, GWL_EXSTYLE) & ~WS_EX_TOOLWINDOW);
+      SendMessage(hWindow, WM_SYSCOMMAND, SC_RESTORE, 0);
       NotifyIcon(FALSE);
-      SetForegroundWindow(hWnd);
+      SetForegroundWindow(hWindow);
     }
     if (hMutex)
       CloseHandle(hMutex);
@@ -1645,7 +1628,7 @@ INT WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
   InitPaths();
   OptionsGet();
 
-  // Maria init...
+  // Mariadb init...
   InitMariaDataFolder();
 
   // Apache init...
@@ -1685,11 +1668,17 @@ INT WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
   // Set PHP and Composer in User path environment variable...
   UpdateUserPathEnvVariable();
 
-  // Update Apache and maria process Id if any...
-  FindOnlineServices();
-
   // Initialize sites' list
   LoadSiteList();
+
+  hDarkBrush = CreateSolidBrush(RGB(45, 45, 45));
+
+  hWindow = CreateDialog(hInstance, MAKEINTRESOURCE(IDD_APP_DIALOG), NULL, MainDlgProc);
+
+  ApplyDarkThemeToApp(hWindow);
+
+  // Update Apache and maria process Id if any...
+  FindOnlineServices();
 
   // Aplay user options...
   if (ApacheOk && PhpOk && Options.AutoStartApache && !ApachePID)
@@ -1697,8 +1686,40 @@ INT WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
   if (MariaOk && Options.AutoStartMaria && !MariaPID)
     NewJob(StartMariaThread);
 
-  // We are ready to go...
-  DialogBox(hInst, MAKEINTRESOURCE(IDD_APP_DIALOG), NULL, (DLGPROC)MainDlgProc);
+  if (Options.StartUp == MINIMIZED)
+    ShowWindow(hWindow, SW_SHOWMINIMIZED);
+  else if (Options.StartUp == SYSTRAY)
+  {
+    SetWindowLongPtrW(hWindow, GWL_EXSTYLE, GetWindowLongPtrW(hWindow, GWL_EXSTYLE) | WS_EX_TOOLWINDOW);
+    NotifyIcon(TRUE);
+  }
+  else
+    ShowWindow(hWindow, SW_SHOW);
+
+  MSG msg;
+  while (GetMessage(&msg, NULL, 0, 0))
+  {
+    if (!IsDialogMessage(hWindow, &msg))
+    {
+      TranslateMessage(&msg);
+      DispatchMessage(&msg);
+    }
+  }
+
+  DeleteBrush(hDarkBrush);
+
+  if (Options.TerminateAllOnQiut)
+  {
+    if (ApachePID)
+      KillApacheThread(0);
+    if (MariaPID)
+      KillMariaThread(0);
+  }
+
+  if (Options.ClearAllLogsOnQiut)
+    ClearLogsAndTmpFiles();
+
+  OptionsSet();
 
 end:
   CoUninitialize();
