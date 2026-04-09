@@ -2,9 +2,10 @@
   <img src="images/screenshot.png" alt="HomeStack Interface" width="640">
 </p>
 
+[![GitHub stars](https://img.shields.io/github/stars/AboSohyle/HomeStack?style=for-the-badge)](https://github.com/AboSohyle/HomeStack/stargazers)
+[![GitHub license](https://img.shields.io/github/license/AboSohyle/HomeStack?style=for-the-badge)](https://github.com/AboSohyle/HomeStack/blob/main/LICENSE)
+[![GitHub forks](https://img.shields.io/github/forks/AboSohyle/HomeStack?style=for-the-badge)](https://github.com/AboSohyle/HomeStack/forks)
 ![Contributions](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)
-[![GitHub license](https://img.shields.io/github/license/thedevs-network/kutt.svg)](https://github.com/AboSohyle/HomeStack/blob/main/LICENSE)
-
 
 # 🏠 HomeStack
 
@@ -63,27 +64,25 @@ Before building HomeStack, ensure you have the following tools configured:
 ### 5. Project Structure and Upgrade
 
 - If you plan for an upgrade `Apache, PHP, Mariadb etc...` keep files structrue as following
+  Please do not change folders names.
 
 ```text
-HomeStack  [never change root folder name]
-   ├── apache/ [never change folder name]
+HomeStack
+   ├── apache/
    │    ├── bin/
    │    ├── error/
    │    ├── logs/
    │    └── modules/
-   ├── mysql/ [never change folder name]
-   │    └── bin/
-   │         └── mariadb files go here...
-   ├── php/ [never change folder name]
-   │    └── php files go here...
-   ├── composer/ [never change folder name]
-   │    └── composer files go here...
-   ├── config/ [never change folder name]
+   ├── mariadb/
+   │    ├── bin/
+   │    └── share/
+   ├── php/
+   ├── composer/
+   ├── config/
    │    └── config files [PLEASE DO NOT EDIT UNTILL YOU KNOW WHAT YOU ARE DOING!]
-   ├── phpMyAdmin/ [never change folder name]
-   │    └── phpmyadmin files go here
-   ├── logs/ [never change folder name]
-   ├── tmp/ [never change folder name]
+   ├── phpMyAdmin/
+   ├── logs/
+   ├── tmp/
    └── HomeStack.exe
 ```
 

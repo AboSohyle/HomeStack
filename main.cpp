@@ -98,7 +98,7 @@ bool InitMariaDataFolder()
 
   STARTUPINFO si;
   PROCESS_INFORMATION pi;
-  const wstring mysqlBase = wstring(RootPath) + L"\\mysql\\data";
+  const wstring mysqlBase = wstring(RootPath) + L"\\mariadb\\data";
 
   // 1. Define required directories
   vector<wstring> requiredDirs = {
@@ -127,9 +127,9 @@ bool InitMariaDataFolder()
     ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
 
     // 2. Build command string
-    const wstring mariadb = L"\"" + wstring(RootPath) + L"\\mysql\\bin\\mariadb-install-db.exe\"";
-    const wstring datadir = L"\"" + wstring(RootPath) + L"\\mysql\\data\"";
-    const wstring config = L"\"" + wstring(RootPath) + L"\\config\\mysql.ini\"";
+    const wstring mariadb = L"\"" + wstring(RootPath) + L"\\mariadb\\bin\\mariadb-install-db.exe\"";
+    const wstring datadir = L"\"" + wstring(RootPath) + L"\\mariadb\\data\"";
+    const wstring config = L"\"" + wstring(RootPath) + L"\\config\\mariadb.ini\"";
     wstring cmdLine = L"cmd /c echo Initializing MariaDB data folder, please wait... && " +
                       mariadb + L" --datadir=" + datadir + L" --config=" + config;
 
@@ -360,7 +360,7 @@ VOID InitPaths()
   StringCchPrintf(file, MAX_PATH, L"%s\\apache\\bin\\httpd.exe", RootPath);
   ApacheOk = FileExists(file);
 
-  StringCchPrintf(file, MAX_PATH, L"%s\\mysql\\bin\\mysqld.exe", RootPath);
+  StringCchPrintf(file, MAX_PATH, L"%s\\mariadb\\bin\\mariadbd.exe", RootPath);
   MariaOk = FileExists(file);
 
   StringCchPrintf(file, MAX_PATH, L"%s\\php\\php.exe", RootPath);
@@ -378,10 +378,10 @@ VOID ClearLogsAndTmpFiles()
   WCHAR targetPath[MAX_PATH];
 
   const WCHAR *logFiles[] = {
-      L"logs\\error.log",
-      L"logs\\access.log",
+      L"logs\\apache_error.log",
+      L"logs\\apache_access.log",
       L"logs\\ssl_request.log",
-      L"logs\\mysql_error.log",
+      L"logs\\mariadb_error.log",
       L"logs\\php_error.log"};
 
   // 1. Delete Log Files
@@ -768,7 +768,7 @@ UINT CALLBACK GetVersionsThread(LPVOID)
   ServiceInfo services[] = {
       {&ApacheOk, L"apache\\bin\\httpd.exe", L"-v", L"Apache/", 7, L' ', IDC_APACHE_V},
       {&PhpOk, L"php\\php.exe", L"-v", L"PHP ", 4, L' ', IDC_PHP_V},
-      {&MariaOk, L"mysql\\bin\\mariadb.exe", L"-V", L"from ", 5, L'-', IDC_MARIA_V},
+      {&MariaOk, L"mariadb\\bin\\mariadb.exe", L"-V", L"from ", 5, L'-', IDC_MARIA_V},
       {&ComposerOk, L"composer\\composer.bat", L"-V", L"version ", 8, L' ', IDC_COMPOSER_V}};
 
   for (auto &s : services)
@@ -822,7 +822,7 @@ UINT CALLBACK GetVersionsThread(LPVOID)
 
 UINT CALLBACK LogFileMonitorThread(LPVOID)
 {
-  if (!ApacheOk || !MariaOk || !PhpOk)
+  if (!ApacheOk && !MariaOk)
     return 1;
 
   wstring logFolder = wstring(RootPath) + L"\\logs";
@@ -893,7 +893,7 @@ UINT CALLBACK StartMariaThread(LPVOID)
   StringCchPrintf(
       Cmd,
       1024,
-      L"\"%s\\mysql\\bin\\mysqld.exe\" --defaults-file=\"%s\\config\\mysql.ini\" --basedir=\"%s\\mysql\" --datadir=\"%s\\mysql\\data\" --tmpdir=\"%s\\tmp\" --plugin-dir=\"%s\\mysql\\lib\\plugin\" --innodb-data-home-dir=\"%s\\mysql\\data\" --innodb-log-group-home-dir=\"%s\\mysql\\data\" --log-error=\"%s\\logs\\mysql_error.log\" --standalone",
+      L"\"%s\\mariadb\\bin\\mariadbd.exe\" --defaults-file=\"%s\\config\\mariadb.ini\" --basedir=\"%s\\mariadb\" --datadir=\"%s\\mariadb\\data\" --tmpdir=\"%s\\tmp\" --plugin-dir=\"%s\\mariadb\\lib\\plugin\" --innodb-data-home-dir=\"%s\\mariadb\\data\" --innodb-log-group-home-dir=\"%s\\mariadb\\data\" --log-error=\"%s\\logs\\mariadb_error.log\" --standalone",
       RootPath, RootPath, RootPath, RootPath, RootPath, RootPath, RootPath, RootPath, RootPath);
 
   if (CreateProcess(NULL, Cmd, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
@@ -925,7 +925,7 @@ UINT CALLBACK KillMariaThread(LPVOID)
 
   WCHAR Cmd[1024];
 
-  StringCchPrintf(Cmd, 1024, L"\"%s\\mysql\\bin\\mariadb-admin.exe\" shutdown -u root", RootPath);
+  StringCchPrintf(Cmd, 1024, L"\"%s\\mariadb\\bin\\mariadb-admin.exe\" shutdown -u root", RootPath);
 
   if (CreateProcess(NULL, Cmd, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
   {
@@ -998,19 +998,19 @@ INT_PTR CALLBACK AcknowledgeProc(HWND hPage, UINT msg, WPARAM wParam, LPARAM lPa
     HWND h1, h2, h3, h4, h5;
     h1 = CreateWindow(WC_LINK,
                       L"The <A HREF=\"https://www.apachelounge.com/\">Apache Software Foundation:</A> For providing the Apache HTTP Server, which serves as the reliable web gateway for the controller's user interface.",
-                      WS_VISIBLE | WS_CHILD, 87, 64, 460, 32, hPage, (HMENU)1200, hInst, NULL);
+                      WS_VISIBLE | WS_CHILD, 87, 64, 410, 32, hPage, (HMENU)1200, hInst, NULL);
     h2 = CreateWindow(WC_LINK,
                       L"The <A HREF=\"https://www.apachelounge.com/\">MariaDB Foundation:</A> For MariaDB, which provides the high-performance database used to log device states and home telemetry data.",
-                      WS_VISIBLE | WS_CHILD, 87, 120, 460, 32, hPage, (HMENU)1201, hInst, NULL);
+                      WS_VISIBLE | WS_CHILD, 87, 110, 410, 32, hPage, (HMENU)1201, hInst, NULL);
     h3 = CreateWindow(WC_LINK,
                       L"The <A HREF=\"https://www.php.net/\">PHP Group:</A> For the PHP scripting language, used to develop the core logic and automation scripts of the stack.",
-                      WS_VISIBLE | WS_CHILD, 87, 175, 460, 32, hPage, (HMENU)1202, hInst, NULL);
+                      WS_VISIBLE | WS_CHILD, 87, 155, 410, 32, hPage, (HMENU)1202, hInst, NULL);
     h4 = CreateWindow(WC_LINK,
                       L"The <A HREF=\"https://getcomposer.org/\">Composer Team:</A> For Composer, the dependency manager that streamlined the integration of various PHP libraries used in this project.",
-                      WS_VISIBLE | WS_CHILD, 87, 230, 460, 32, hPage, (HMENU)1203, hInst, NULL);
+                      WS_VISIBLE | WS_CHILD, 87, 201, 410, 32, hPage, (HMENU)1203, hInst, NULL);
     h5 = CreateWindow(WC_LINK,
                       L"The <A HREF=\"https://www.phpmyadmin.net/\">phpMyAdmin Project:</A> For phpMyAdmin, which served as the primary interface for managing and debugging the system's database.",
-                      WS_VISIBLE | WS_CHILD, 87, 282, 460, 32, hPage, (HMENU)1204, hInst, NULL);
+                      WS_VISIBLE | WS_CHILD, 87, 244, 410, 32, hPage, (HMENU)1204, hInst, NULL);
 
     SendMessage(h1, WM_SETFONT, (WPARAM)fn, 1);
     SendMessage(h2, WM_SETFONT, (WPARAM)fn, 1);
@@ -1069,10 +1069,10 @@ INT_PTR CALLBACK AboutProc(HWND hPage, UINT msg, WPARAM wParam, LPARAM lParam)
     ApplyDarkTheme(hPage);
     HWND h1 = CreateWindow(WC_LINK,
                            L"<A HREF=\"https://github.com/AboSohyle/HomeStack/\">repository</A>",
-                           WS_VISIBLE | WS_CHILD, 388, 50, 60, 17, hPage, (HMENU)1204, hInst, NULL);
+                           WS_VISIBLE | WS_CHILD, 440, 50, 60, 17, hPage, (HMENU)1204, hInst, NULL);
     HWND h2 = CreateWindow(WC_LINK,
-                           L"Built with <A HREF=\"https://winlibs.com/\">winlibs</A>.",
-                           WS_VISIBLE | WS_CHILD, 14, 238, 278, 17, hPage, (HMENU)1204, hInst, NULL);
+                           L"If you encounter any issues or have feature requests, please open an <A HREF=\"https://github.com/abosohyle/homestack/issues\">issue</A>.",
+                           WS_VISIBLE | WS_CHILD, 40, 249, 390, 17, hPage, (HMENU)1204, hInst, NULL);
 
     HFONT fn = (HFONT)SendMessage(hPage, WM_GETFONT, 0, 0);
     SendMessage(h1, WM_SETFONT, (WPARAM)fn, 1);
@@ -1240,12 +1240,12 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
       case IDC_APACHE_ERROR:
       {
-        StartDefaultEditor(L"logs\\error.log");
+        StartDefaultEditor(L"logs\\apache_error.log");
         break;
       }
       case IDC_APACHE_ACCESS:
       {
-        StartDefaultEditor(L"logs\\access.log");
+        StartDefaultEditor(L"logs\\apache_access.log");
         break;
       }
       case IDC_PHP_ERROR:
@@ -1255,7 +1255,7 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
       }
       case IDC_MARIA_ERROR:
       {
-        StartDefaultEditor(L"logs\\mysql_error.log");
+        StartDefaultEditor(L"logs\\mariadb_error.log");
         break;
       }
 
@@ -1379,9 +1379,9 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
   case WM_NOTIFYLOGFILES:
   {
     static const wchar_t *logFiles[] = {
-        L"\\logs\\access.log",
-        L"\\logs\\error.log",
-        L"\\logs\\mysql_error.log",
+        L"\\logs\\apache_access.log",
+        L"\\logs\\apache_error.log",
+        L"\\logs\\mariadb_error.log",
         L"\\logs\\php_error.log"};
 
     static const int controlIDs[] = {
@@ -1470,15 +1470,19 @@ INT_PTR CALLBACK MainDlgProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     else
       Animate_Stop(hAni);
 
-    SetWindowText(GetDlgItem(hWnd, IDC_APACHE_START), ApachePID ? L"Stop" : L"Start");
-    EnableWindow(GetDlgItem(hWnd, IDC_APACHE_RESET), ApachePID);
-    EnableWindow(GetDlgItem(hWnd, IDC_PHP_INFO), ApachePID);
-    InvalidateRect(GetDlgItem(hWnd, IDC_APACHE_STATIC), NULL, FALSE);
-
-    SetWindowText(GetDlgItem(hWnd, IDC_MARIA_START), MariaPID ? L"Stop" : L"Start");
-    EnableWindow(GetDlgItem(hWnd, IDC_MARIA_RESET), MariaPID);
-    InvalidateRect(GetDlgItem(hWnd, IDC_MARIA_STATIC), NULL, FALSE);
-
+    if (ApacheOk)
+    {
+      SetWindowText(GetDlgItem(hWnd, IDC_APACHE_START), ApachePID ? L"Stop" : L"Start");
+      EnableWindow(GetDlgItem(hWnd, IDC_APACHE_RESET), ApachePID);
+      EnableWindow(GetDlgItem(hWnd, IDC_PHP_INFO), ApachePID);
+      InvalidateRect(GetDlgItem(hWnd, IDC_APACHE_STATIC), NULL, FALSE);
+    }
+    if (MariaOk)
+    {
+      SetWindowText(GetDlgItem(hWnd, IDC_MARIA_START), MariaPID ? L"Stop" : L"Start");
+      EnableWindow(GetDlgItem(hWnd, IDC_MARIA_RESET), MariaPID);
+      InvalidateRect(GetDlgItem(hWnd, IDC_MARIA_STATIC), NULL, FALSE);
+    }
     EnableWindow(GetDlgItem(hWnd, IDC_PHPMYADMIN), Up ? PmaOk : FALSE);
 
     UINT icn = Up ? IDI_APPICON_ON : ((ApachePID || MariaPID) ? IDI_APPICON_ONOFF : IDI_APPICON_OFF);
@@ -1612,10 +1616,13 @@ INT WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
     return -1;
   }
 
+  hDarkBrush = CreateSolidBrush(RGB(45, 45, 45));
+
   wc.hInstance = hInst = hInstance;
   wc.hIcon = LoadIcon(hInst, MAKEINTRESOURCE(IDI_APPICON));
   wc.hIconSm = wc.hIcon;
   wc.lpszClassName = ClassName;
+  wc.hbrBackground = hDarkBrush;
 
   if (!RegisterClassEx(&wc))
   {
@@ -1671,8 +1678,6 @@ INT WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR, int)
 
   // Update Apache and maria process PIDs if any...
   FindOnlineServices();
-
-  hDarkBrush = CreateSolidBrush(RGB(45, 45, 45));
 
   hWindow = CreateDialog(hInstance, MAKEINTRESOURCE(IDD_APP_DIALOG), NULL, MainDlgProc);
 
